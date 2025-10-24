@@ -1,4 +1,11 @@
-import { contextBridge } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
 
-// API vacia por ahora; expondremos metodos seguros mas adelante
-contextBridge.exposeInMainWorld('keyping', {});
+console.log('[preload] loaded');
+
+contextBridge.exposeInMainWorld('keyping', {
+  ping: () => ipcRenderer.invoke('keyping:ping'),
+  checkCandidate: (pwd: string) => {
+    console.log('[preload] invoking keyping:check');
+    return ipcRenderer.invoke('keyping:check', { pwd });
+  }
+});

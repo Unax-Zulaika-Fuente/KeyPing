@@ -1,1 +1,12 @@
 /* You can add global styles to this file, and also import other style files */
+:root {
+  --bg:#0f1115; --card:#161a22; --text:#e6e9ef; --muted:#9aa3b2;
+  --accent:#4aa3ff; --warn:#ffcc66; --danger:#ff6b6b; --ok:#6bff9d; --border:#2a2f3a; --btn:#1a1f2a;
+}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+.container{max-width:980px;margin:24px auto;padding:0 16px}
+.card{background:var(--card);border-radius:12px;padding:16px;border:1px solid var(--border)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--btn);color:var(--text);text-decoration:none;cursor:pointer}
+.btn.primary{border-color:var(--accent)} .link{color:var(--accent);text-decoration:none}
+.muted{color:var(--muted)}

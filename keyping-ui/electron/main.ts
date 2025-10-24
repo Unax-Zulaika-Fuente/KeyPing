@@ -1,4 +1,5 @@
-import { app, BrowserWindow, shell } from 'electron';
+// main.ts
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import * as path from 'path';
 import * as url from 'url';
 
@@ -17,7 +18,7 @@ function createWindow() {
     }
   });
 
-  // Seguridad basica
+  // basic hardening
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (e, targetUrl) => {
     if (!targetUrl.startsWith('file://')) {
@@ -39,7 +40,149 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
 });
 
-app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});
+
+/* ----------------------------------------------------------------
+   Multilingual pattern detector (MVP)
+   - normalizes case, diacritics and leet speak
+   - detects common words in EN/ES/FR/DE/PT/IT basics
+   - detects numeric sequences and keyboard runs
+   - detects repeated chars and incremental suffixes
+   - checks length and character variety
+------------------------------------------------------------------ */
+
+type Level = 'ok' | 'warn' | 'danger';
+
+// Diccionario comun multi-idioma
+const COMMON_WORDS = new Set<string>([
+  // English
+  'password','pass','admin','administrator','root','user','login','letmein','welcome',
+  'iloveyou','love','secret','default','guest','superuser','owner','test','testing',
+  'qwerty','abc123','monkey','dragon','football','baseball','starwars','pokemon',
+  'summer','winter','spring','autumn','sunshine','shadow','flower','computer',
+  // Spanish
+  'contrasena','seguridad','usuario','administrador','hola','bienvenido','teamo','amor',
+  'secreto','prueba','clave','acceso','probar',
+  // Portuguese
+  'senha','seguranca','bemvindo','amor','teste','secreto','usuario','adm',
+  // French
+  'motdepasse','bonjour','bienvenue','amour','secret','utilisateur',
+  // German
+  'passwort','hallo','willkommen','geheim','benutzer',
+  // Italian
+  'passworde','ciao','benvenuto','amore','segreto','utente',
+  // Short variants and roots
+  'adm','usr','pwd','asdf','zxcv','azerty','qsdf','qwer','abc','123'
+]);
+
+const KEYBOARD_RUNS = [
+  'qwerty','asdf','zxcv','qwert','wasd',
+  'azerty','qsdf','wxcv','azer'
+];
+
+const NUM_SEQUENCES = ['0123','1234','2345','3456','4567','5678','6789','7890'];
+const YEAR_SUFFIX = /(19|20)\d{2}$/;
+
+// basic leet map
+const LEET_MAP: Record<string,string> = {
+  '0':'o','1':'i','2':'z','3':'e','4':'a','5':'s','6':'g','7':'t','8':'b','9':'g',
+  '@':'a','$':'s','!':'i','¡':'i','¿':'','?':'','+':'t'
+};
+
+// normalize to compare across languages and styles
+function normalizeBasic(s: string): string {
+  let x = (s || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[\s._\-:/\\|'",`~^°(){}\[\]]/g,'');
+  x = x.replace(/[0123456789@$!¡\+\?]/g, m => LEET_MAP[m] ?? m);
+  x = x.replace(/(.)\1{2,}/g, '$1$1');
+  return x;
+}
+
+function classMask(s: string): number {
+  let m = 0;
+  if (/[a-z]/.test(s)) m |= 1;
+  if (/[A-Z]/.test(s)) m |= 2;
+  if (/\d/.test(s))   m |= 4;
+  if (/[^A-Za-z0-9]/.test(s)) m |= 8;
+  return m;
+}
+
+function hasCommonWord(nrm: string): string | null {
+  for (const w of COMMON_WORDS) {
+    if (!w) continue;
+    if (nrm === w) return w;
+    if (nrm.startsWith(w)) return w;
+    if (nrm.includes(w)) return w;
+  }
+  return null;
+}
+
+function hasSequence(nrm: string): string | null {
+  if (NUM_SEQUENCES.some(seq => nrm.includes(seq))) return 'numeric sequence';
+  if (KEYBOARD_RUNS.some(run => nrm.includes(run))) return 'keyboard run';
+  if (/([a-z])\1{2,}/.test(nrm) || /(\d)\1{2,}/.test(nrm)) return 'repeated chars';
+  return null;
+}
+
+function looksIncremental(orig: string): boolean {
+  return /(.)+([!.?_\-])?\d{1,4}$/.test(orig) || YEAR_SUFFIX.test(orig) || /[\W_]$/.test(orig);
+}
+
+function checkPasswordBetter(pwd: string) {
+  const reasons: string[] = [];
+  let level: Level = 'ok';
+  const nrm = normalizeBasic(pwd);
+  const orig = pwd || '';
+
+  console.log('[main] RAW:', JSON.stringify(pwd), 'NORM:', nrm);
+
+  if (!orig) return { level, reasons };
+
+  const hit = hasCommonWord(nrm);
+  if (hit) { level = 'danger'; reasons.push(`common word: "${hit}"`); }
+
+  const seq = hasSequence(nrm);
+  if (seq) { level = level === 'danger' ? 'danger' : 'warn'; reasons.push(seq); }
+
+  if (looksIncremental(orig)) {
+    level = level === 'danger' ? 'danger' : 'warn';
+    reasons.push('incremental suffix (e.g., !1, 2024)');
+  }
+
+  const len = orig.length;
+  const cm = classMask(orig);
+  const classCount = ((cm & 1)?1:0)+((cm & 2)?1:0)+((cm & 4)?1:0)+((cm & 8)?1:0);
+
+  if (len < 10) { level = level === 'danger' ? 'danger' : 'warn'; reasons.push('short length (<10)'); }
+  if (classCount < 3) { level = level === 'danger' ? 'danger' : 'warn'; reasons.push('low character variety'); }
+
+  if (/^(password|pass|contrasena|senha|passwort|motdepasse|admin)[^a-z]*\d{0,4}$/i.test(orig)) {
+    level = 'danger';
+    reasons.push('trivial base with small variation');
+  }
+
+  return { level, reasons };
+}
+
+/* -------------------- IPC bridge --------------------- */
+
+// ping para diagnostico rapido
+ipcMain.handle('keyping:ping', async () => {
+  console.log('[main] ping');
+  return `pong ${process.versions.electron}`;
+});
+
+// principal
+ipcMain.handle('keyping:check', async (_evt, args: { pwd: string }) => {
+  console.log('[main] keyping:check called with:', JSON.stringify(args?.pwd));
+  return checkPasswordBetter(args?.pwd ?? '');
+});
