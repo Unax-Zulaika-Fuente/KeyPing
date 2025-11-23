@@ -2,10 +2,29 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { app } from 'electron';
 import { encryptVault, decryptVault } from './crypto';
-import { VaultData } from './types';
+import { VaultData, VaultEntry } from './types';
 
 function vaultPath(): string {
   return path.join(app.getPath('userData'), 'keyping-vault.kp');
+}
+
+function migrate(data: any): VaultData {
+  const entries: VaultEntry[] = Array.isArray(data?.entries) ? data.entries : [];
+
+  for (const e of entries) {
+    // Migracion antigua: note -> label
+    if (!e.label && (e as any).note) {
+      e.label = (e as any).note;
+      delete (e as any).note;
+    }
+
+    // Si no tiene active, lo consideramos true
+    if (typeof e.active === 'undefined') {
+      e.active = true;
+    }
+  }
+
+  return { entries };
 }
 
 export async function loadVault(): Promise<VaultData> {
@@ -13,7 +32,8 @@ export async function loadVault(): Promise<VaultData> {
   try {
     const buf = await fs.readFile(file);
     const json = await decryptVault(buf);
-    return JSON.parse(json) as VaultData;
+    const raw = JSON.parse(json);
+    return migrate(raw);
   } catch (err: any) {
     if (err.code === 'ENOENT') return { entries: [] };
     console.error('[vault] load error:', err);

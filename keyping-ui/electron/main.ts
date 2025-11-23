@@ -3,8 +3,14 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import * as path from 'path';
 import * as url from 'url';
 import { RAW_COMMON_WORDS } from './common-words';
-import { addPasswordToVault, getVaultEntries } from './vault';
+import {
+  addPasswordToVault,
+  getVaultEntries,
+  softDeleteEntry,
+  replacePasswordForEntry
+} from './vault';
 import { findMostSimilarInVault } from './vault/similarity';
+import { clipboard } from 'electron'; // arriba del todo si no lo tenias
 
 
 
@@ -184,8 +190,8 @@ async function checkPasswordBetter(pwd: string) {
     const best = await findMostSimilarInVault(orig);
     if (best) {
       const score = Math.round(best.score);
-      const noteSnippet = best.entry.note
-        ? ` (${best.entry.note})`
+      const noteSnippet = best.entry.label
+        ? ` (${best.entry.label})`
         : '';
 
       if (score >= 80) {
@@ -213,26 +219,63 @@ ipcMain.handle('keyping:ping', async () => {
   return `pong ${process.versions.electron}`;
 });
 
-// analisis de contraseña
+// checker principal (nota: ahora es async)
 ipcMain.handle('keyping:check', async (_evt, args: { pwd: string }) => {
   console.log('[main] keyping:check called with:', JSON.stringify(args?.pwd));
   return await checkPasswordBetter(args?.pwd ?? '');
 });
 
-// guardar en vault cifrado (keyping-vault.kp)
-ipcMain.handle('keyping:save', async (_evt, args: { pwd: string; note?: string }) => {
-  console.log('[main] keyping:save called');  // 👈 log para tus tests
-  const entry = await addPasswordToVault(args.pwd, args.note);
-  const { id, createdAt, length, classMask, note } = entry;
-  return { id, createdAt, length, classMask, note };
+// guardar nueva entrada
+ipcMain.handle('keyping:save', async (_evt, args: { pwd: string; label?: string }) => {
+  const entry = await addPasswordToVault(args.pwd, args.label);
+  const { id, createdAt, length, classMask, label } = entry;
+  return { id, createdAt, length, classMask, label };
 });
 
-// listar entradas del vault
+// listar solo activas
 ipcMain.handle('keyping:list', async () => {
-  console.log('[main] keyping:list called');  // 👈 log
   const entries = await getVaultEntries();
-  return entries.map(e => {
-    const { id, createdAt, length, classMask, note } = e;
-    return { id, createdAt, length, classMask, note };
-  });
+  return entries
+    .filter(e => e.active !== false)
+    .map(e => {
+      const { id, createdAt, length, classMask } = e;
+      const label = e.label;
+      return { id, createdAt, length, classMask, label };
+    });
+});
+
+// Copiar password al portapapeles durante 20s
+ipcMain.handle('keyping:copy', async (_evt, args: { id: string }) => {
+  const entries = await getVaultEntries();
+  const entry = entries.find(e => e.id === args.id && e.active !== false);
+
+  if (!entry || !entry.password) {
+    throw new Error('Password not found or has no stored secret');
+  }
+  
+  clipboard.writeText(entry.password);
+  setTimeout(() => {
+    try {
+      // Dejamos el clipboard vacio despues de 20s
+      clipboard.writeText('');
+    } catch (err) {
+      console.error('[main] clipboard clear error:', err);
+    }
+  }, 20_000);
+  
+  return true;
+});
+
+// Soft delete
+ipcMain.handle('keyping:delete', async (_evt, args: { id: string }) => {
+  await softDeleteEntry(args.id);
+  return true;
+});
+
+// Editar password (crea nueva entrada y desactiva la antigua)
+ipcMain.handle('keyping:update', async (_evt, args: { id: string; pwd: string }) => {
+  const updated = await replacePasswordForEntry(args.id, args.pwd);
+  if (!updated) throw new Error('Entry not found');
+  const { id, createdAt, length, classMask, label } = updated;
+  return { id, createdAt, length, classMask, label };
 });

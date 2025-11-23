@@ -10,9 +10,18 @@ contextBridge.exposeInMainWorld('keyping', {
     return ipcRenderer.invoke('keyping:check', { pwd });
   },
 
-  savePassword: (pwd: string, note?: string) =>
-    ipcRenderer.invoke('keyping:save', { pwd, note }),
+  savePassword: (pwd: string, label?: string) =>
+    ipcRenderer.invoke('keyping:save', { pwd, label }),
 
   listPasswords: () =>
-    ipcRenderer.invoke('keyping:list')
+    ipcRenderer.invoke('keyping:list'),
+
+  copyPassword: (id: string) =>
+    ipcRenderer.invoke('keyping:copy', { id }),
+
+  deletePassword: (id: string) =>
+    ipcRenderer.invoke('keyping:delete', { id }),
+
+  updatePassword: (id: string, pwd: string) =>
+    ipcRenderer.invoke('keyping:update', { id, pwd })
 });

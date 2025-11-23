@@ -13,7 +13,7 @@ function classMask(s: string): number {
   return m;
 }
 
-export async function addPasswordToVault(pwd: string, note?: string): Promise<VaultEntry> {
+export async function addPasswordToVault(pwd: string, label?: string): Promise<VaultEntry> {
   const hash = createHash('sha256').update(pwd).digest('hex');
   const normalized = normalizePattern(pwd);
 
@@ -24,7 +24,9 @@ export async function addPasswordToVault(pwd: string, note?: string): Promise<Va
     classMask: classMask(pwd),
     hash,
     normalized,
-    note
+    label,
+    password: pwd,
+    active: true
   };
 
   const vault = await loadVault();
@@ -34,6 +36,45 @@ export async function addPasswordToVault(pwd: string, note?: string): Promise<Va
   return entry;
 }
 
-export async function getVaultEntries() {
+export async function getVaultEntries(): Promise<VaultEntry[]> {
   return (await loadVault()).entries;
+}
+
+// Marca una entrada como inactiva (no se muestra), pero sigue en el vault
+export async function softDeleteEntry(id: string): Promise<void> {
+  const vault = await loadVault();
+  const idx = vault.entries.findIndex(e => e.id === id);
+  if (idx === -1) return;
+  vault.entries[idx].active = false;
+  await saveVault(vault);
+}
+
+// Reemplaza la password de una entrada (manteniendo historico)
+export async function replacePasswordForEntry(id: string, newPwd: string): Promise<VaultEntry | null> {
+  const vault = await loadVault();
+  const old = vault.entries.find(e => e.id === id);
+  if (!old) return null;
+
+  old.active = false;
+
+  const hash = createHash('sha256').update(newPwd).digest('hex');
+  const normalized = normalizePattern(newPwd);
+
+  const newEntry: VaultEntry = {
+    ...old,
+    id: randomUUID(),
+    createdAt: Date.now(),
+    length: newPwd.length,
+    classMask: classMask(newPwd),
+    hash,
+    normalized,
+    password: newPwd,
+    active: true,
+    previousId: old.id
+  };
+
+  vault.entries.push(newEntry);
+  await saveVault(vault);
+
+  return newEntry;
 }

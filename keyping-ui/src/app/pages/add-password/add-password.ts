@@ -1,18 +1,18 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgIf } from '@angular/common';
+import { NgIf, NgClass } from '@angular/common';
 import { ElectronService, CheckResult } from '../../core/electron.service';
 
 @Component({
   selector: 'app-add-password',
   standalone: true,
-  imports: [FormsModule, NgIf],
+  imports: [FormsModule, NgIf, NgClass],
   templateUrl: './add-password.html',
   styleUrls: ['./add-password.scss']
 })
 export class AddPasswordComponent {
   pwd = '';
-  note = '';
+  label = ''; // antes note
   alert?: { level: CheckResult['level']; title: string; message: string };
   private timer?: any;
 
@@ -42,10 +42,10 @@ export class AddPasswordComponent {
 
   async onSave(): Promise<void> {
     if (!this.pwd) return;
-    await this.es.savePassword(this.pwd, this.note || undefined);
+    await this.es.savePassword(this.pwd, this.label || undefined);
     console.log('[renderer] saved password meta');
     this.pwd = '';
-    this.note = '';
+    this.label = '';
     this.alert = undefined;
   }
 }
