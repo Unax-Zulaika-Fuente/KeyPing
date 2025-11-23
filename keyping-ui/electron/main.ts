@@ -3,6 +3,8 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import * as path from 'path';
 import * as url from 'url';
 import { RAW_COMMON_WORDS } from './common-words';
+import { addPasswordToVault, getVaultEntries } from './vault';
+
 
 let win: BrowserWindow | null = null;
 
@@ -179,8 +181,26 @@ ipcMain.handle('keyping:ping', async () => {
   return `pong ${process.versions.electron}`;
 });
 
-// principal
+// analisis de contraseña
 ipcMain.handle('keyping:check', async (_evt, args: { pwd: string }) => {
   console.log('[main] keyping:check called with:', JSON.stringify(args?.pwd));
   return checkPasswordBetter(args?.pwd ?? '');
+});
+
+// guardar en vault cifrado (keyping-vault.kp)
+ipcMain.handle('keyping:save', async (_evt, args: { pwd: string; note?: string }) => {
+  console.log('[main] keyping:save called');  // 👈 log para tus tests
+  const entry = await addPasswordToVault(args.pwd, args.note);
+  const { id, createdAt, length, classMask, note } = entry;
+  return { id, createdAt, length, classMask, note };
+});
+
+// listar entradas del vault
+ipcMain.handle('keyping:list', async () => {
+  console.log('[main] keyping:list called');  // 👈 log
+  const entries = await getVaultEntries();
+  return entries.map(e => {
+    const { id, createdAt, length, classMask, note } = e;
+    return { id, createdAt, length, classMask, note };
+  });
 });

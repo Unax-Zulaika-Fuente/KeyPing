@@ -1,7 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
-
-type Entry = { id: string; createdAt: number; length: number; classMask: number; note?: string; };
+import { ElectronService, PasswordMeta } from '../../core/electron.service';
 
 @Component({
   selector: 'app-passwords',
@@ -10,11 +9,22 @@ type Entry = { id: string; createdAt: number; length: number; classMask: number;
   templateUrl: './passwords.html',
   styleUrls: ['./passwords.scss']
 })
-export class PasswordsComponent {
-  entries: Entry[] = [
-    { id: '1', createdAt: Date.now() - 86400000, length: 12, classMask: 1|2|4|8, note: 'email' },
-    { id: '2', createdAt: Date.now() - 4200000,  length: 16, classMask: 1|4|8 }
-  ];
+export class PasswordsComponent implements OnInit {
+  entries: PasswordMeta[] = [];
+  loading = true;
+
+  constructor(private es: ElectronService) {}
+
+  async ngOnInit(): Promise<void> {
+    try {
+      this.entries = await this.es.listPasswords();
+    } catch (err) {
+      console.error('[renderer] listPasswords error', err);
+      this.entries = [];
+    } finally {
+      this.loading = false;
+    }
+  }
 
   maskToChips(mask: number): string[] {
     const chips: string[] = [];
@@ -22,8 +32,10 @@ export class PasswordsComponent {
     if (mask & 2) chips.push('A-Z');
     if (mask & 4) chips.push('0-9');
     if (mask & 8) chips.push('sym');
-    if (mask & 16) chips.push('space');
     return chips;
   }
-  fmtDate(ts: number): string { return new Date(ts).toLocaleString(); }
+
+  fmtDate(ts: number): string {
+    return new Date(ts).toLocaleString();
+  }
 }
