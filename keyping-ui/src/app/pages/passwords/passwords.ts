@@ -33,6 +33,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 export class PasswordsComponent implements OnInit {
   loading = true;
   entries: PasswordMeta[] = [];
+  listCollapsed = false;
 
   // Termino de busqueda
   searchTerm = '';
@@ -364,6 +365,10 @@ export class PasswordsComponent implements OnInit {
   
   goToAddPassword(): void {
     this.router.navigate(['/add']);
+  }
+
+  toggleListCollapse(): void {
+    this.listCollapsed = !this.listCollapsed;
   }
 }
 
