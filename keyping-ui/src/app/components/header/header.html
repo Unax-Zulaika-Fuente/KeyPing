@@ -7,14 +7,19 @@
     </div>
 
     <nav class="sidebar-nav">
-      <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
+      <a
+        routerLink="/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="nav-item"
+      >
         <span class="nav-icon">🏠</span>
         <span>Dashboard</span>
       </a>
 
       <a routerLink="/passwords" routerLinkActive="active" class="nav-item">
         <div class="nav-main">
-          <span class="nav-icon">🔐</span>
+          <span class="nav-icon">🔒</span>
           <span>Passwords</span>
         </div>
 
@@ -23,10 +28,79 @@
         </span>
       </a>
 
-      <a routerLink="/generator" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">🎲</span>
-        <span>Generator</span>
-      </a>
+      <div
+        #generatorWrapper
+        class="generator-wrapper"
+        (mouseenter)="onGeneratorEnter()"
+        (mouseleave)="onGeneratorLeave()"
+      >
+        <a class="nav-item" href="#" (click)="$event.preventDefault()">
+          <span class="nav-icon">✨</span>
+          <span>Generator</span>
+        </a>
+
+        <div
+          class="generator-panel"
+          *ngIf="showGenerator"
+          [ngStyle]="{ left: genPosX + 'px', top: genPosY + 'px' }"
+          (mouseenter)="onPanelEnter()"
+          (mouseleave)="onPanelLeave()"
+        >
+          <div class="drag-handle" (mousedown)="onDragStart($event)" title="Mover panel">
+            ⋮⋮
+          </div>
+          <button
+            class="pin-btn"
+            [class.pinned]="generatorPinned"
+            (click)="togglePin($event)"
+            title="Pin"
+          >
+            📌
+          </button>
+          <div class="gen-title">Password generator</div>
+
+          <div class="gen-row length">
+            <label>Length: <strong>{{ genLength }}</strong></label>
+            <input
+              type="range"
+              min="8"
+              max="40"
+              [(ngModel)]="genLength"
+              (input)="onLengthChange()"
+            />
+          </div>
+
+          <div class="gen-row toggles">
+            <label title="Include A–Z">
+              <input type="checkbox" [(ngModel)]="useUpper" (change)="onOptionChange()" />
+              Uppercase
+            </label>
+            <label title="Include a–z">
+              <input type="checkbox" [(ngModel)]="useLower" (change)="onOptionChange()" />
+              Lowercase
+            </label>
+            <label title="Include 0–9">
+              <input type="checkbox" [(ngModel)]="useNumbers" (change)="onOptionChange()" />
+              Numbers
+            </label>
+            <label title="Include !@#$ etc">
+              <input type="checkbox" [(ngModel)]="useSymbols" (change)="onOptionChange()" />
+              Symbols
+            </label>
+          </div>
+
+          <div class="gen-output">
+            <span class="gen-password">{{ generatedPassword }}</span>
+            <div class="gen-actions">
+              <button class="btn ghost small" (click)="refreshGenerated($event)">Refresh</button>
+              <button class="btn primary small" (click)="copyGenerated($event)">
+                <ng-container *ngIf="!copyFeedback; else copied">Copiar</ng-container>
+                <ng-template #copied>Copiado ✓</ng-template>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <a class="nav-item disabled">
         <span class="nav-icon">📁</span>
@@ -39,7 +113,7 @@
       </a>
 
       <a class="nav-item disabled">
-        <span class="nav-icon">❤️</span>
+        <span class="nav-icon">💊</span>
         <span>Password Health</span>
       </a>
 
