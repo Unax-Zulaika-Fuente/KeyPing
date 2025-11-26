@@ -7,8 +7,7 @@
     </div>
 
     <nav class="sidebar-nav">
-      <!-- <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item"> -->
-      <a class="nav-item disabled">
+      <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
         <span class="nav-icon">🏠</span>
         <span>Dashboard</span>
       </a>
@@ -22,6 +21,11 @@
         <span class="nav-badge" *ngIf="passwordCount !== null">
           {{ passwordCount }}
         </span>
+      </a>
+
+      <a routerLink="/generator" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🎲</span>
+        <span>Generator</span>
       </a>
 
       <a class="nav-item disabled">

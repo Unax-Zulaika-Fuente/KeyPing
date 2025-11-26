@@ -158,6 +158,18 @@ export class PasswordsComponent implements OnInit {
     }
   }
 
+  async copyText(value: string | undefined, ev?: MouseEvent): Promise<void> {
+    if (ev) ev.stopPropagation();
+    if (!value) return;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      }
+    } catch (err) {
+      console.error('[renderer] copy field error', err);
+    }
+  }
+
   // ---- ELIMINAR ----
   async onDelete(entry: PasswordMeta): Promise<void> {
     const ok = confirm(

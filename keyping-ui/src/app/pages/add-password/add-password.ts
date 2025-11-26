@@ -20,6 +20,7 @@ export class AddPasswordComponent {
   email = '';
   username = '';
   twoFactorEnabled = false;
+  passwordError = false;
   alert?: { level: CheckResult['level']; title: string; message: string };
   private timer?: any;
 
@@ -51,8 +52,19 @@ export class AddPasswordComponent {
     this.timer = setTimeout(() => this.onCheck(), 180);
   }
 
+  onPasswordInput(): void {
+    if (this.passwordError && this.pwd.trim()) {
+      this.passwordError = false;
+    }
+    this.debouncedCheck();
+  }
+
   async onSave(): Promise<void> {
-      if (!this.pwd) return;
+      if (!this.pwd) {
+        this.passwordError = true;
+        return;
+      }
+      this.passwordError = false;
 
       await this.es.savePassword(
         this.pwd,
@@ -74,6 +86,7 @@ export class AddPasswordComponent {
       this.username = '';
       this.email = '';
       this.twoFactorEnabled = false;
+      this.passwordError = false;
       this.alert = undefined;
 
       await this.router.navigate(['/passwords']);
