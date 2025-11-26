@@ -1,12 +1,46 @@
-<header class="card" style="display:flex;justify-content:space-between;align-items:center;">
-  <div style="display:flex;align-items:center;gap:12px;">
-    <div style="width:10px;height:10px;border-radius:50%;background:var(--accent);"></div>
-    <strong>KeyPing</strong>
-  </div>
+<div class="layout-shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <img [src]="logoPath" class="app-logo" alt="KeyPing logo" />
+      <span class="app-name">KeyPing</span>
+    </div>
 
-  <nav style="display:flex;gap:12px;">
-    <a class="link" routerLink="/dashboard">Dashboard</a>
-    <a class="link" routerLink="/passwords">Passwords</a>
-    <a class="btn primary" routerLink="/add">+ Add</a>
-  </nav>
-</header>
+    <nav class="sidebar-nav">
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🏠</span>
+        <span>Dashboard</span>
+      </a>
+
+      <a routerLink="/passwords" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🔐</span>
+        <span>Passwords</span>
+      </a>
+
+      <a class="nav-item disabled">
+        <span class="nav-icon">📁</span>
+        <span>Folders</span>
+      </a>
+
+      <a class="nav-item disabled">
+        <span class="nav-icon">🛡️</span>
+        <span>Data Breach Check</span>
+      </a>
+
+      <a class="nav-item disabled">
+        <span class="nav-icon">❤️</span>
+        <span>Password Health</span>
+      </a>
+
+      <a class="nav-item disabled">
+        <span class="nav-icon">⚙️</span>
+        <span>Settings</span>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- CONTENIDO DINÁMICO -->
+  <main class="main">
+    <router-outlet></router-outlet>
+  </main>
+</div>

@@ -28,9 +28,29 @@
       "output": "dist/build"
     },
     "asar": true,
-    "win": { "target": ["nsis"], "artifactName": "KeyPing-Setup-${version}.exe" },
-    "linux": { "target": ["AppImage"], "category": "Utility" },
-    "mac": { "target": ["dmg"], "hardenedRuntime": true }
+    "extraResources": [
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "win": {
+      "target": ["nsis"],
+      "artifactName": "KeyPing-Setup-${version}.exe",
+      "icon": "build/icon.ico"
+    },
+
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Utility",
+      "icon": "build/icon.png"
+    },
+
+    "mac": {
+      "target": ["dmg"],
+      "hardenedRuntime": true,
+      "icon": "build/icon.icns"
+    }
   },
   "prettier": {
     "printWidth": 100,
