@@ -19,6 +19,7 @@ export class AddPasswordComponent {
   passwordChangeUrl = '';
   email = '';
   username = '';
+  twoFactorEnabled = false;
   alert?: { level: CheckResult['level']; title: string; message: string };
   private timer?: any;
 
@@ -59,7 +60,8 @@ export class AddPasswordComponent {
         this.loginUrl || undefined,
         this.passwordChangeUrl || undefined,
         this.username || undefined,
-        this.email || undefined
+        this.email || undefined,
+        this.twoFactorEnabled
       );
 
       await this.passwordCountSvc.refreshFromDisk();
@@ -71,6 +73,7 @@ export class AddPasswordComponent {
       this.passwordChangeUrl = '';
       this.username = '';
       this.email = '';
+      this.twoFactorEnabled = false;
       this.alert = undefined;
 
       await this.router.navigate(['/passwords']);

@@ -4,6 +4,7 @@ export type VaultEntry = {
   id: string;
   createdAt: number;
   updatedAt?: number;
+  twoFactorEnabled?: boolean;
   length: number;
   classMask: number;
   hash: string;        // hash sha256 de la password

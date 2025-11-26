@@ -19,7 +19,8 @@ export async function addPasswordToVault(
   loginUrl?: string,
   passwordChangeUrl?: string,
   username?: string,
-  email?: string
+  email?: string,
+  twoFactorEnabled?: boolean
 ): Promise<VaultEntry> {
   const hash = createHash('sha256').update(pwd).digest('hex');
   const normalized = normalizePattern(pwd);
@@ -28,6 +29,7 @@ export async function addPasswordToVault(
     id: randomUUID(),
     createdAt: Date.now(),
     updatedAt: Date.now(),
+    twoFactorEnabled: !!twoFactorEnabled,
     length: pwd.length,
     classMask: classMask(pwd),
     hash,
@@ -79,6 +81,7 @@ export async function replacePasswordForEntry(
     id: randomUUID(),
     createdAt: old.createdAt,
     updatedAt: Date.now(),
+    twoFactorEnabled: old.twoFactorEnabled,
     length: newPwd.length,
     classMask: classMask(newPwd),
     hash,
@@ -107,7 +110,8 @@ export async function updateEntryMeta(
   loginUrl?: string,
   passwordChangeUrl?: string,
   username?: string,
-  email?: string
+  email?: string,
+  twoFactorEnabled?: boolean
 ): Promise<VaultEntry> {
   const vault = await loadVault();
   const entry = vault.entries.find(e => e.id === id);
@@ -118,6 +122,7 @@ export async function updateEntryMeta(
   if (typeof passwordChangeUrl !== 'undefined') entry.passwordChangeUrl = passwordChangeUrl;
   if (typeof username !== 'undefined') entry.username = username;
   if (typeof email !== 'undefined') entry.email = email;
+  if (typeof twoFactorEnabled !== 'undefined') entry.twoFactorEnabled = twoFactorEnabled;
   entry.updatedAt = Date.now();
 
   await saveVault(vault);

@@ -59,6 +59,7 @@ export class PasswordsComponent implements OnInit {
   editPasswordChangeUrl = '';
   editEmail = '';
   editUsername = '';
+  editTwoFactorEnabled = false;
 
 
   constructor(
@@ -117,6 +118,10 @@ export class PasswordsComponent implements OnInit {
     const ts = hasUpdate ? entry.updatedAt! : entry.createdAt;
     const prefix = hasUpdate ? 'Modificado' : 'Creado';
     return `${prefix}: ${this.fmtDate(ts)}`;
+  }
+
+  twoFactorLabel(entry: PasswordMeta): string {
+    return entry.twoFactorEnabled ? 'Habilitado' : 'Deshabilitado';
   }
 
   // mascara proporcional a la longitud
@@ -240,6 +245,7 @@ export class PasswordsComponent implements OnInit {
     this.editPasswordChangeUrl = this.selected.passwordChangeUrl || '';
     this.editUsername = this.selected.username || '';
     this.editEmail = this.selected.email || '';
+    this.editTwoFactorEnabled = !!this.selected.twoFactorEnabled;
 
     // Si ya estaba revelada, usamos ese valor como base
     // (asi al entrar en editar, la ves directamente si ya la habias mostrado)
@@ -273,7 +279,8 @@ export class PasswordsComponent implements OnInit {
       this.editLoginUrl || '',
       this.editPasswordChangeUrl || '',
       this.editUsername || '',
-      this.editEmail || ''
+      this.editEmail || '',
+      this.editTwoFactorEnabled
     );
 
     // 3) Cerrar modo edicion pero mantener el panel abierto en la entrada actualizada
