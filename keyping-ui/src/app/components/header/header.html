@@ -1,6 +1,6 @@
 <div class="layout-shell">
   <!-- SIDEBAR -->
-  <aside class="sidebar">
+  <aside class="sidebar" [class.sidebar-locked]="locked">
     <div class="sidebar-header">
       <img [src]="logoPath" class="app-logo" alt="KeyPing logo" />
       <span class="app-name">KeyPing</span>
@@ -12,12 +12,14 @@
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"
         class="nav-item"
+        [class.nav-disabled]="locked"
+        (click)="onNavClick($event)"
       >
         <span class="nav-icon">🏠</span>
         <span>Dashboard</span>
       </a>
 
-      <a routerLink="/passwords" routerLinkActive="active" class="nav-item">
+      <a routerLink="/passwords" routerLinkActive="active" class="nav-item" [class.nav-disabled]="locked" (click)="onNavClick($event)">
         <div class="nav-main">
           <span class="nav-icon">🔒</span>
           <span>Passwords</span>
@@ -30,12 +32,12 @@
 
       <kp-password-generator></kp-password-generator>
 
-      <a class="nav-item disabled">
+      <!-- <a class="nav-item disabled">
         <span class="nav-icon">🌐</span>
         <span>Data Breach Check</span>
-      </a>
+      </a> -->
 
-      <a routerLink="/health" routerLinkActive="active" class="nav-item">
+      <a routerLink="/health" routerLinkActive="active" class="nav-item" [class.nav-disabled]="locked" (click)="onNavClick($event)">
         <span class="nav-icon">🛡️</span>
         <span>Password Health</span>
       </a>

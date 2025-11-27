@@ -14,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { ElectronService, PasswordMeta } from '../../core/electron.service';
 import { PasswordCountService } from '../../core/password-count.service';
 import { Router, ActivatedRoute } from '@angular/router';
+import { MasterLockService } from '../../core/master-lock.service';
 
 @Component({
   selector: 'app-passwords',
@@ -91,7 +92,8 @@ export class PasswordsComponent implements OnInit {
     private es: ElectronService,
     private passwordCountSvc: PasswordCountService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private master: MasterLockService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -116,6 +118,7 @@ export class PasswordsComponent implements OnInit {
       if (previouslySelectedId) {
         this.selected = this.entries.find(e => e.id === previouslySelectedId) || null;
       }
+      this.master.persistVault(this.entries);
     } finally {
       this.loading = false;
     }
@@ -274,6 +277,7 @@ export class PasswordsComponent implements OnInit {
 
     await this.es.deletePassword(entry.id);
     await this.loadEntries();
+    this.master.persistVault(this.entries);
     
     // EN CASO DE QUE NO SE ACTUALIZE CORRECTAMENTE EL CONTADOR AL ELIMINAR:
     //this.passwordCountSvc.setLocalCount(this.entries.length);
@@ -314,6 +318,7 @@ export class PasswordsComponent implements OnInit {
 
     // 4) Recargar lista
     await this.loadEntries();
+    this.master.persistVault(this.entries);
 
     // 5) Si el panel de detalle estaba abierto para esta entrada,
     //    volvemos a seleccionar la entrada actualizada
@@ -465,6 +470,7 @@ export class PasswordsComponent implements OnInit {
     });
     this.entries = nextEntries;
     this.selected = nextEntries.find(e => e.id === currentId) || updatedMeta;
+    this.master.persistVault(this.entries);
   }
 
   cancelDetailEdit(): void {
@@ -724,6 +730,7 @@ export class PasswordsComponent implements OnInit {
     ev.stopPropagation();
     const folderKey = this.normalizeFolder(folder);
     await this.repositionEntry(this.draggingEntryId, folderKey, entry.id);
+    this.master.persistVault(this.entries);
   }
 
   async onEntryDropContainer(folder: string, ev: DragEvent): Promise<void> {
@@ -732,6 +739,7 @@ export class PasswordsComponent implements OnInit {
     ev.preventDefault();
     ev.stopPropagation();
     await this.repositionEntry(this.draggingEntryId, folderKey);
+    this.master.persistVault(this.entries);
   }
 
   onEntryDragOverContainer(folder: string, ev: DragEvent): void {
@@ -928,6 +936,7 @@ export class PasswordsComponent implements OnInit {
       if (this.selected?.id) {
         this.selected = updatedEntries.find(e => e.id === this.selected!.id) || null;
       }
+      this.master.persistVault(this.entries);
     } finally {
       this.folderActionInProgress = false;
       this.closeFolderMenu();

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { NgIf } from '@angular/common';
@@ -16,6 +16,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   readonly logoPath = 'assets/logo.png';
 
   passwordCount: number | null = null;
+  @Input() locked = false;
 
   private navSub?: Subscription;
   private countSub?: Subscription;
@@ -40,5 +41,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.navSub?.unsubscribe();
     this.countSub?.unsubscribe();
+  }
+
+  onNavClick(ev: MouseEvent): void {
+    if (this.locked) {
+      ev.preventDefault();
+      ev.stopPropagation();
+    }
   }
 }

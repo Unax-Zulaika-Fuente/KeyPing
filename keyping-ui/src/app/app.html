@@ -1,4 +1,47 @@
-<kp-header></kp-header>
+<kp-header [locked]="lockState !== 'unlocked'"></kp-header>
 <main class="container">
   <router-outlet />
 </main>
+
+<div class="lock-screen" *ngIf="lockState !== 'unlocked'">
+  <div class="lock-card">
+    <h2 *ngIf="lockState === 'locked'">Desbloquear</h2>
+    <h2 *ngIf="lockState === 'unset'">Configura tu contraseña maestra</h2>
+    <p class="muted small">
+      La llave se deriva con PBKDF2 y los datos se cifran con AES-GCM en localStorage. Autolock por inactividad.
+    </p>
+
+    <form (ngSubmit)="lockState === 'unset' ? onCreateMaster() : onUnlock()" class="lock-form">
+      <label>
+        <span>{{ lockState === 'unset' ? 'Contraseña maestra' : 'Introduce tu contraseña' }}</span>
+        <input
+          type="password"
+          [(ngModel)]="masterPassword"
+          name="masterPassword"
+          autocomplete="current-password"
+          required
+        />
+      </label>
+
+      <label *ngIf="lockState === 'unset'">
+        <span>Confirmar contraseña</span>
+        <input
+          type="password"
+          [(ngModel)]="masterPasswordConfirm"
+          name="masterPasswordConfirm"
+          autocomplete="new-password"
+          required
+        />
+      </label>
+
+      <div class="lock-actions">
+        <span class="field-error lock-error" *ngIf="masterError">
+          {{ masterError }}
+        </span>
+        <button type="submit" class="btn primary">
+          {{ lockState === 'unset' ? 'Crear y desbloquear' : 'Desbloquear' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
