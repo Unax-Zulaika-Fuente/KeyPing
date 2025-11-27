@@ -34,6 +34,14 @@ export class PasswordsComponent implements OnInit {
   loading = true;
   entries: PasswordMeta[] = [];
   listCollapsed = false;
+  folderOrder: string[] = [];
+  itemOrder: Record<string, string[]> = {};
+  draggingFolder: string | null = null;
+  folderDropTarget: string | null = null;
+  draggingEntryId: string | null = null;
+  draggingEntryFolder: string | null = null;
+  entryDropTarget: string | null = null;
+  private dragGhostEl: HTMLElement | null = null;
 
   // Termino de busqueda
   searchTerm = '';
@@ -63,6 +71,9 @@ export class PasswordsComponent implements OnInit {
   editTwoFactorEnabled = false;
   editFolder = '';
   collapsedFolders = new Set<string>();
+  private readonly defaultFolderLabel = 'Sin carpeta';
+  private readonly folderOrderStorageKey = 'keyping.folderOrder';
+  private readonly itemOrderStorageKey = 'keyping.itemOrder';
 
 
   constructor(
@@ -86,9 +97,14 @@ export class PasswordsComponent implements OnInit {
 
   async loadEntries(): Promise<void> {
     this.loading = true;
+    const previouslySelectedId = this.selected?.id;
     try {
       this.entries = await this.es.listPasswords();
       this.passwordCountSvc.setLocalCount(this.entries.length);
+      this.syncOrderingState();
+      if (previouslySelectedId) {
+        this.selected = this.entries.find(e => e.id === previouslySelectedId) || null;
+      }
     } finally {
       this.loading = false;
     }
@@ -97,7 +113,7 @@ export class PasswordsComponent implements OnInit {
   // Lista filtrada en base al searchTerm
   get filteredEntries(): PasswordMeta[] {
     const term = this.searchTerm.trim().toLowerCase();
-    if (!term) return this.entries;
+    if (!term) return [...this.entries];
 
     return this.entries.filter(e => {
       const fields: (string | undefined)[] = [
@@ -110,6 +126,37 @@ export class PasswordsComponent implements OnInit {
 
       return fields.some(f => f && f.toLowerCase().includes(term));
     });
+  }
+
+  // Lista filtrada + ordenada segun preferencia del usuario
+  get orderedEntries(): PasswordMeta[] {
+    const filtered = this.filteredEntries;
+    return filtered.sort((a, b) => this.compareEntries(a, b));
+  }
+
+  private compareEntries(a: PasswordMeta, b: PasswordMeta): number {
+    const folderA = this.normalizeFolder(a.folder);
+    const folderB = this.normalizeFolder(b.folder);
+    if (folderA !== folderB) {
+      return this.folderIndex(folderA) - this.folderIndex(folderB);
+    }
+
+    const idxA = this.entryIndex(folderA, a.id);
+    const idxB = this.entryIndex(folderB, b.id);
+    if (idxA !== idxB) return idxA - idxB;
+
+    return (a.label || '').localeCompare(b.label || '');
+  }
+
+  private folderIndex(folder: string): number {
+    const idx = this.folderOrder.indexOf(folder);
+    return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+  }
+
+  private entryIndex(folder: string, id: string): number {
+    const list = this.itemOrder[folder] || [];
+    const idx = list.indexOf(id);
+    return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
   }
 
   maskToChips(mask: number): string[] {
@@ -130,6 +177,10 @@ export class PasswordsComponent implements OnInit {
     const ts = hasUpdate ? entry.updatedAt! : entry.createdAt;
     const prefix = hasUpdate ? 'Modificado' : 'Creado';
     return `${prefix}: ${this.fmtDate(ts)}`;
+  }
+
+  folderDisplayName(folder: string): string {
+    return folder || this.defaultFolderLabel;
   }
 
   twoFactorLabel(entry: PasswordMeta): string {
@@ -172,15 +223,15 @@ export class PasswordsComponent implements OnInit {
 
   get groupedEntries(): { folder: string; items: PasswordMeta[] }[] {
     const map = new Map<string, PasswordMeta[]>();
-    const list = this.filteredEntries;
+    const list = this.orderedEntries;
     for (const e of list) {
-      const folder = (e.folder || 'Sin carpeta').trim() || 'Sin carpeta';
+      const folder = this.normalizeFolder(e.folder);
       if (!map.has(folder)) map.set(folder, []);
       map.get(folder)!.push(e);
     }
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([folder, items]) => ({ folder, items }));
+    return this.folderOrder
+      .filter(f => map.has(f))
+      .map(folder => ({ folder, items: map.get(folder)! }));
   }
 
   trackFolder(_index: number, group: { folder: string }): string {
@@ -300,7 +351,7 @@ export class PasswordsComponent implements OnInit {
   }
 
   toggleFolder(folder: string): void {
-    const key = folder || 'Sin carpeta';
+    const key = this.normalizeFolder(folder);
     if (this.collapsedFolders.has(key)) {
       this.collapsedFolders.delete(key);
     } else {
@@ -309,7 +360,7 @@ export class PasswordsComponent implements OnInit {
   }
 
   isFolderCollapsed(folder: string): boolean {
-    const key = folder || 'Sin carpeta';
+    const key = this.normalizeFolder(folder);
     return this.collapsedFolders.has(key);
   }
 
@@ -427,6 +478,311 @@ export class PasswordsComponent implements OnInit {
 
   toggleListCollapse(): void {
     this.listCollapsed = !this.listCollapsed;
+  }
+
+  // --- ORDEN PERSONALIZADO ---
+  private normalizeFolder(folder?: string): string {
+    const clean = (folder || '').trim();
+    return clean || this.defaultFolderLabel;
+  }
+
+  private loadPersistedOrdering(): void {
+    try {
+      const folders = JSON.parse(localStorage.getItem(this.folderOrderStorageKey) || '[]');
+      if (Array.isArray(folders)) {
+        this.folderOrder = folders.map((f: any) => this.normalizeFolder(String(f))).filter(Boolean);
+      }
+    } catch {
+      this.folderOrder = [];
+    }
+
+    try {
+      const items = JSON.parse(localStorage.getItem(this.itemOrderStorageKey) || '{}');
+      if (items && typeof items === 'object') {
+        const cast: Record<string, string[]> = {};
+        for (const [k, v] of Object.entries(items)) {
+          if (Array.isArray(v)) {
+            cast[this.normalizeFolder(k)] = v.filter(id => typeof id === 'string');
+          }
+        }
+        this.itemOrder = cast;
+      }
+    } catch {
+      this.itemOrder = {};
+    }
+  }
+
+  private persistOrdering(): void {
+    localStorage.setItem(this.folderOrderStorageKey, JSON.stringify(this.folderOrder));
+    localStorage.setItem(this.itemOrderStorageKey, JSON.stringify(this.itemOrder));
+  }
+
+  private syncOrderingState(): void {
+    if (!this.folderOrder.length && !Object.keys(this.itemOrder).length) {
+      this.loadPersistedOrdering();
+    }
+
+    const folders = this.collectFolders();
+    this.folderOrder = this.mergeFolderOrder(folders);
+    this.itemOrder = this.mergeItemOrder(folders);
+    this.persistOrdering();
+  }
+
+  private collectFolders(): string[] {
+    const set = new Set<string>();
+    for (const e of this.entries) {
+      set.add(this.normalizeFolder(e.folder));
+    }
+    return Array.from(set);
+  }
+
+  private mergeFolderOrder(folders: string[]): string[] {
+    const existing = this.folderOrder.filter(f => folders.includes(f));
+    const missing = folders.filter(f => !existing.includes(f)).sort((a, b) => a.localeCompare(b));
+    return [...existing, ...missing];
+  }
+
+  private mergeItemOrder(folders: string[]): Record<string, string[]> {
+    const next: Record<string, string[]> = {};
+    for (const folder of folders) {
+      const currentIds = this.entries
+        .filter(e => this.normalizeFolder(e.folder) === folder)
+        .map(e => e.id);
+
+      const saved = (this.itemOrder[folder] || []).filter(id => currentIds.includes(id));
+      const missing = currentIds.filter(id => !saved.includes(id));
+      next[folder] = [...saved, ...missing];
+    }
+    return next;
+  }
+
+  private getOrderedIdsForFolder(folderKey: string): string[] {
+    return this.orderedEntries
+      .filter(e => this.normalizeFolder(e.folder) === folderKey)
+      .map(e => e.id);
+  }
+
+  onFolderDragStart(folder: string, ev: DragEvent): void {
+    const key = this.normalizeFolder(folder);
+    this.draggingFolder = key;
+    this.folderDropTarget = null;
+    ev.dataTransfer?.setData('text/plain', key);
+    ev.dataTransfer?.setDragImage(this.createGhost(this.folderDisplayName(key)), 0, 0);
+  }
+
+  onFolderDragEnter(folder: string, ev: DragEvent): void {
+    const key = this.normalizeFolder(folder);
+    if (this.draggingEntryId && !this.draggingFolder) {
+      ev.preventDefault();
+      this.folderDropTarget = key;
+      return;
+    }
+    if (!this.draggingFolder || key === this.draggingFolder) return;
+    ev.preventDefault();
+    this.folderDropTarget = key;
+  }
+
+  onFolderDragOver(folder: string, ev: DragEvent): void {
+    const key = this.normalizeFolder(folder);
+    if (this.draggingEntryId && !this.draggingFolder) {
+      ev.preventDefault();
+      this.folderDropTarget = key;
+      return;
+    }
+    if (!this.draggingFolder || key === this.draggingFolder) return;
+    ev.preventDefault();
+    this.folderDropTarget = key;
+  }
+
+  async onFolderDrop(folder: string, ev: DragEvent): Promise<void> {
+    const key = this.normalizeFolder(folder);
+    if (this.draggingEntryId && !this.draggingFolder) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      await this.repositionEntry(this.draggingEntryId, key);
+      return;
+    }
+    if (!this.draggingFolder || key === this.draggingFolder) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const from = this.draggingFolder;
+    const to = key;
+    const list = this.folderOrder.filter(f => f !== from);
+    const fromIdx = this.folderOrder.indexOf(from);
+    const toIdxOriginal = this.folderOrder.indexOf(to);
+    const targetIdx = list.indexOf(to);
+    const insertAt = fromIdx !== -1 && toIdxOriginal !== -1 && fromIdx < toIdxOriginal
+      ? targetIdx + 1
+      : targetIdx;
+    list.splice(insertAt < 0 ? list.length : insertAt, 0, from);
+    this.folderOrder = list;
+    this.folderDropTarget = null;
+    this.persistOrdering();
+  }
+
+  onFolderDragEnd(): void {
+    this.draggingFolder = null;
+    this.folderDropTarget = null;
+    this.clearGhost();
+  }
+
+  onEntryDragStart(entry: PasswordMeta, folder: string, ev: DragEvent): void {
+    const folderKey = this.normalizeFolder(folder);
+    this.draggingEntryId = entry.id;
+    this.draggingEntryFolder = folderKey;
+    this.entryDropTarget = null;
+    ev.dataTransfer?.setData('text/plain', entry.id);
+    ev.dataTransfer?.setDragImage(this.createGhost(entry.label || this.folderDisplayName(folderKey)), 0, 0);
+  }
+
+  onEntryDragEnter(entry: PasswordMeta, folder: string, ev: DragEvent): void {
+    this.handleEntryDragOver(entry, folder, ev);
+  }
+
+  onEntryDragOver(entry: PasswordMeta, folder: string, ev: DragEvent): void {
+    this.handleEntryDragOver(entry, folder, ev);
+  }
+
+  private handleEntryDragOver(entry: PasswordMeta, folder: string, ev: DragEvent): void {
+    if (!this.draggingEntryId || this.draggingFolder) return;
+    const folderKey = this.normalizeFolder(folder);
+    if (entry.id === this.draggingEntryId) return;
+    ev.preventDefault();
+    this.entryDropTarget = entry.id;
+    this.folderDropTarget = folderKey;
+  }
+
+  async onEntryDrop(entry: PasswordMeta, folder: string, ev: DragEvent): Promise<void> {
+    if (!this.draggingEntryId || this.draggingFolder) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const folderKey = this.normalizeFolder(folder);
+    await this.repositionEntry(this.draggingEntryId, folderKey, entry.id);
+  }
+
+  async onEntryDropContainer(folder: string, ev: DragEvent): Promise<void> {
+    if (!this.draggingEntryId || this.draggingFolder) return;
+    const folderKey = this.normalizeFolder(folder);
+    ev.preventDefault();
+    ev.stopPropagation();
+    await this.repositionEntry(this.draggingEntryId, folderKey);
+  }
+
+  onEntryDragOverContainer(folder: string, ev: DragEvent): void {
+    if (!this.draggingEntryId || this.draggingFolder) return;
+    ev.preventDefault();
+    this.folderDropTarget = this.normalizeFolder(folder);
+  }
+
+  onEntryDragEnd(): void {
+    this.draggingEntryId = null;
+    this.draggingEntryFolder = null;
+    this.entryDropTarget = null;
+    this.folderDropTarget = null;
+    this.clearGhost();
+  }
+
+  private async repositionEntry(entryId: string, targetFolder: string, beforeId?: string): Promise<void> {
+    const entry = this.entries.find(e => e.id === entryId);
+    if (!entry) return;
+
+    const sourceFolder = this.normalizeFolder(entry.folder);
+    const destFolder = this.normalizeFolder(targetFolder);
+    const storageFolder = destFolder === this.defaultFolderLabel ? '' : destFolder;
+
+    const destBaseOrder = this.itemOrder[destFolder] || this.getOrderedIdsForFolder(destFolder);
+    const fromIdx = destBaseOrder.indexOf(entryId);
+
+    const sourceList = (this.itemOrder[sourceFolder] || this.getOrderedIdsForFolder(sourceFolder)).filter(id => id !== entryId);
+    this.itemOrder[sourceFolder] = sourceList;
+
+    const destListBase = destBaseOrder.filter(id => id !== entryId);
+    const targetIdx = typeof beforeId === 'string' ? destListBase.indexOf(beforeId) : -1;
+    const targetIdxOriginal = typeof beforeId === 'string' ? destBaseOrder.indexOf(beforeId) : -1;
+
+    const movingDownWithinFolder =
+      sourceFolder === destFolder &&
+      fromIdx !== -1 &&
+      targetIdxOriginal !== -1 &&
+      fromIdx < targetIdxOriginal;
+
+    const sourceFolderIdx = this.folderOrder.indexOf(sourceFolder);
+    const destFolderIdx = this.folderOrder.indexOf(destFolder);
+    const movingDownAcrossFolders =
+      sourceFolder !== destFolder &&
+      sourceFolderIdx !== -1 &&
+      destFolderIdx !== -1 &&
+      destFolderIdx > sourceFolderIdx;
+
+    const movingDown = movingDownWithinFolder || movingDownAcrossFolders;
+
+    const insertIdx = targetIdx >= 0
+      ? targetIdx + (movingDown ? 1 : 0)
+      : destListBase.length;
+
+    destListBase.splice(insertIdx, 0, entryId);
+    this.itemOrder[destFolder] = destListBase;
+
+    if (!this.folderOrder.includes(destFolder)) {
+      this.folderOrder.push(destFolder);
+    }
+
+    this.persistOrdering();
+
+    if (sourceFolder !== destFolder) {
+      await this.es.updateMeta(
+        entry.id,
+        entry.label || '',
+        entry.loginUrl || '',
+        entry.passwordChangeUrl || '',
+        entry.username || '',
+        entry.email || '',
+        storageFolder,
+        !!entry.twoFactorEnabled
+      );
+    }
+
+    if (sourceFolder !== destFolder) {
+      const updatedEntries = this.entries.map(e =>
+        e.id === entryId ? { ...e, folder: storageFolder } : e
+      );
+      this.entries = updatedEntries;
+      if (this.selected?.id === entryId) {
+        this.selected = updatedEntries.find(e => e.id === entryId) || null;
+      }
+    }
+
+    this.draggingEntryFolder = destFolder;
+
+    this.folderDropTarget = null;
+    this.entryDropTarget = null;
+  }
+
+  private createGhost(text: string): HTMLElement {
+    if (this.dragGhostEl) {
+      this.dragGhostEl.remove();
+    }
+    const ghost = document.createElement('div');
+    ghost.textContent = text;
+    ghost.style.position = 'fixed';
+    ghost.style.top = '-9999px';
+    ghost.style.left = '-9999px';
+    ghost.style.padding = '8px 10px';
+    ghost.style.borderRadius = '10px';
+    ghost.style.background = '#1f2937';
+    ghost.style.color = '#e5e7eb';
+    ghost.style.fontSize = '12px';
+    ghost.style.fontWeight = '600';
+    document.body.appendChild(ghost);
+    this.dragGhostEl = ghost;
+    return ghost;
+  }
+
+  private clearGhost(): void {
+    if (this.dragGhostEl) {
+      this.dragGhostEl.remove();
+      this.dragGhostEl = null;
+    }
   }
 }
 
