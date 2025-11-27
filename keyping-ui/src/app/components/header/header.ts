@@ -4,6 +4,7 @@ import { filter, Subscription } from 'rxjs';
 import { NgIf } from '@angular/common';
 import { PasswordGeneratorComponent } from '../password-generator/password-generator';
 import { PasswordCountService } from '../../core/password-count.service';
+import { MasterLockService } from '../../core/master-lock.service';
 
 @Component({
   selector: 'kp-header',
@@ -23,7 +24,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
-    private passwordCountSvc: PasswordCountService
+    private passwordCountSvc: PasswordCountService,
+    private master: MasterLockService
   ) {}
 
   ngOnInit(): void {
@@ -48,5 +50,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
       ev.preventDefault();
       ev.stopPropagation();
     }
+  }
+
+  onLock(): void {
+    this.master.lock();
   }
 }
