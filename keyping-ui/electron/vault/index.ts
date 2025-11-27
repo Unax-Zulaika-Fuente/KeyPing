@@ -20,6 +20,7 @@ export async function addPasswordToVault(
   passwordChangeUrl?: string,
   username?: string,
   email?: string,
+  folder?: string,
   twoFactorEnabled?: boolean
 ): Promise<VaultEntry> {
   const hash = createHash('sha256').update(pwd).digest('hex');
@@ -41,7 +42,8 @@ export async function addPasswordToVault(
     loginUrl,
     passwordChangeUrl,
     username,
-    email
+    email,
+    folder
   };
 
   const vault = await loadVault();
@@ -111,6 +113,7 @@ export async function updateEntryMeta(
   passwordChangeUrl?: string,
   username?: string,
   email?: string,
+  folder?: string,
   twoFactorEnabled?: boolean
 ): Promise<VaultEntry> {
   const vault = await loadVault();
@@ -122,6 +125,7 @@ export async function updateEntryMeta(
   if (typeof passwordChangeUrl !== 'undefined') entry.passwordChangeUrl = passwordChangeUrl;
   if (typeof username !== 'undefined') entry.username = username;
   if (typeof email !== 'undefined') entry.email = email;
+  if (typeof folder !== 'undefined') entry.folder = folder;
   if (typeof twoFactorEnabled !== 'undefined') entry.twoFactorEnabled = twoFactorEnabled;
   entry.updatedAt = Date.now();
 

@@ -19,6 +19,7 @@ export class AddPasswordComponent {
   passwordChangeUrl = '';
   email = '';
   username = '';
+  folder = '';
   twoFactorEnabled = false;
   passwordError = false;
   alert?: { level: CheckResult['level']; title: string; message: string };
@@ -73,6 +74,7 @@ export class AddPasswordComponent {
         this.passwordChangeUrl || undefined,
         this.username || undefined,
         this.email || undefined,
+        this.folder || undefined,
         this.twoFactorEnabled
       );
 
@@ -85,6 +87,7 @@ export class AddPasswordComponent {
       this.passwordChangeUrl = '';
       this.username = '';
       this.email = '';
+      this.folder = '';
       this.twoFactorEnabled = false;
       this.passwordError = false;
       this.alert = undefined;

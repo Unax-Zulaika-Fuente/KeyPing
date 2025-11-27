@@ -18,6 +18,7 @@ export type VaultEntry = {
   passwordChangeUrl?: string;  // URL directa para cambio de contraseña
   username?: string;
   email?: string;
+  folder?: string;
 };
 
 export type VaultData = {

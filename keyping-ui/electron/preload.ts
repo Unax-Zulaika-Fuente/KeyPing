@@ -10,8 +10,8 @@ contextBridge.exposeInMainWorld('keyping', {
     return ipcRenderer.invoke('keyping:check', { pwd });
   },
 
-  savePassword: (pwd: string, label?: string, loginUrl?: string, passwordChangeUrl?: string, username?: string, email?: string, twoFactorEnabled?: boolean) =>
-    ipcRenderer.invoke('keyping:save', { pwd, label, loginUrl, passwordChangeUrl, username, email, twoFactorEnabled }),
+  savePassword: (pwd: string, label?: string, loginUrl?: string, passwordChangeUrl?: string, username?: string, email?: string, folder?: string, twoFactorEnabled?: boolean) =>
+    ipcRenderer.invoke('keyping:save', { pwd, label, loginUrl, passwordChangeUrl, username, email, folder, twoFactorEnabled }),
 
   listPasswords: () =>
     ipcRenderer.invoke('keyping:list'),
@@ -25,8 +25,8 @@ contextBridge.exposeInMainWorld('keyping', {
   updatePassword: (id: string, pwd: string) =>
     ipcRenderer.invoke('keyping:update', { id, pwd }),
   
-  updateMeta: (id: string, label: string, loginUrl: string, passwordChangeUrl: string, username?: string, email?: string, twoFactorEnabled?: boolean) =>
-    ipcRenderer.invoke('keyping:updateMeta', { id, label, loginUrl, passwordChangeUrl, username, email, twoFactorEnabled }),
+  updateMeta: (id: string, label: string, loginUrl: string, passwordChangeUrl: string, username?: string, email?: string, folder?: string, twoFactorEnabled?: boolean) =>
+    ipcRenderer.invoke('keyping:updateMeta', { id, label, loginUrl, passwordChangeUrl, username, email, folder, twoFactorEnabled }),
   
   getPassword: (id: string) =>
     ipcRenderer.invoke('keyping:getPassword', { id }),

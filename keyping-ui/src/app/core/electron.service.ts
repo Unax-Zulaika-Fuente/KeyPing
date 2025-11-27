@@ -12,6 +12,7 @@ export type PasswordMeta = {
   createdAt: number;
   updatedAt?: number;
   twoFactorEnabled?: boolean;
+  folder?: string;
   length: number;
   classMask: number;
   label?: string;
@@ -30,13 +31,14 @@ type KeypingApi = {
     passwordChangeUrl?: string,
     username?: string,
     email?: string,
+    folder?: string,
     twoFactorEnabled?: boolean
   ): Promise<PasswordMeta>;
   listPasswords(): Promise<PasswordMeta[]>;
   copyPassword(id: string): Promise<boolean>;
   deletePassword(id: string): Promise<boolean>;
   updatePassword(id: string, pwd: string): Promise<PasswordMeta>;
-  updateMeta(id: string, label?: string, loginUrl?: string, passwordChangeUrl?: string, username?: string, email?: string, twoFactorEnabled?: boolean): Promise<PasswordMeta>;
+  updateMeta(id: string, label?: string, loginUrl?: string, passwordChangeUrl?: string, username?: string, email?: string, folder?: string, twoFactorEnabled?: boolean): Promise<PasswordMeta>;
   copySecure?(text: string, ttlMs?: number): Promise<boolean>;
   getPassword(id: string): Promise<string | null>;
   openExternal(url: string): Promise<boolean>;
@@ -65,10 +67,11 @@ export class ElectronService {
     passwordChangeUrl?: string,
     username?: string,
     email?: string,
+    folder?: string,
     twoFactorEnabled?: boolean
   ): Promise<PasswordMeta> {
     if (!this.api) throw new Error('No preload API available');
-    return this.api.savePassword(pwd, label, loginUrl, passwordChangeUrl, username, email, twoFactorEnabled);
+    return this.api.savePassword(pwd, label, loginUrl, passwordChangeUrl, username, email, folder, twoFactorEnabled);
   }
 
   async listPasswords(): Promise<PasswordMeta[]> {
@@ -97,11 +100,11 @@ export class ElectronService {
     if (!this.api) throw new Error('No preload API available');
     return this.api.updatePassword(id, pwd);
   }
-  async updateMeta(id: string, label?: string, loginUrl?: string, passwordChangeUrl?: string, username?: string, email?: string, twoFactorEnabled?: boolean): Promise<PasswordMeta> {
+  async updateMeta(id: string, label?: string, loginUrl?: string, passwordChangeUrl?: string, username?: string, email?: string, folder?: string, twoFactorEnabled?: boolean): Promise<PasswordMeta> {
     if (!this.api || !this.api.updateMeta) {
       throw new Error('No preload API available');
     }
-    return this.api.updateMeta(id, label, loginUrl, passwordChangeUrl, username, email, twoFactorEnabled);
+    return this.api.updateMeta(id, label, loginUrl, passwordChangeUrl, username, email, folder, twoFactorEnabled);
   }
 
   async openExternal(url: string): Promise<void> {

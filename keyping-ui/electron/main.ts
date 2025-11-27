@@ -242,7 +242,7 @@ ipcMain.handle('keyping:check', async (_evt, args: { pwd: string }) => {
 });
 
 // guardar nueva entrada
-ipcMain.handle('keyping:save', async (_evt, args: { pwd: string; label?: string; loginUrl?: string; passwordChangeUrl?: string, username?: string, email?: string }) => {
+ipcMain.handle('keyping:save', async (_evt, args: { pwd: string; label?: string; loginUrl?: string; passwordChangeUrl?: string, username?: string, email?: string, folder?: string }) => {
   const entry = await addPasswordToVault(
     args.pwd,
     args.label,
@@ -250,10 +250,11 @@ ipcMain.handle('keyping:save', async (_evt, args: { pwd: string; label?: string;
     args.passwordChangeUrl,
     args.username,
     args.email,
+    args.folder,
     (args as any).twoFactorEnabled
   );
-  const { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, twoFactorEnabled } = entry;
-  return { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, twoFactorEnabled };
+  const { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, folder, twoFactorEnabled } = entry;
+  return { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, folder, twoFactorEnabled };
 });
 
 // listar solo activas
@@ -262,9 +263,9 @@ ipcMain.handle('keyping:list', async () => {
   return entries
     .filter(e => e.active !== false)
     .map(e => {
-      const { id, createdAt, updatedAt, length, classMask, loginUrl, passwordChangeUrl, username, email, twoFactorEnabled } = e;
+      const { id, createdAt, updatedAt, length, classMask, loginUrl, passwordChangeUrl, username, email, folder, twoFactorEnabled } = e;
       const label = e.label;
-      return { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, twoFactorEnabled };
+      return { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, folder, twoFactorEnabled };
     });
 });
 
@@ -322,8 +323,8 @@ ipcMain.handle('keyping:update', async (_evt, args: { id: string; pwd: string })
   const updated = await replacePasswordForEntry(args.id, args.pwd);
   if (!updated) throw new Error('Entry not found');
 
-  const { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, twoFactorEnabled } = updated;
-  return { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, twoFactorEnabled };
+  const { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, folder, twoFactorEnabled } = updated;
+  return { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, folder, twoFactorEnabled };
 });
 
 
@@ -334,6 +335,7 @@ ipcMain.handle('keyping:updateMeta', async (_evt, args: {
   passwordChangeUrl?: string;
   username?: string;
   email?: string;
+  folder?: string;
   twoFactorEnabled?: boolean;
 }) => {
   const entry = await updateEntryMeta(
@@ -343,10 +345,11 @@ ipcMain.handle('keyping:updateMeta', async (_evt, args: {
     args.passwordChangeUrl,
     args.username,
     args.email,
+    args.folder,
     args.twoFactorEnabled
   );
-  const { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, twoFactorEnabled } = entry;
-  return { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, twoFactorEnabled };
+  const { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, folder, twoFactorEnabled } = entry;
+  return { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, folder, twoFactorEnabled };
 });
 
 ipcMain.handle('keyping:getPassword', async (_evt, args: { id: string }) => {

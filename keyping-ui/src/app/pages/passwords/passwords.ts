@@ -61,6 +61,8 @@ export class PasswordsComponent implements OnInit {
   editEmail = '';
   editUsername = '';
   editTwoFactorEnabled = false;
+  editFolder = '';
+  collapsedFolders = new Set<string>();
 
 
   constructor(
@@ -168,6 +170,27 @@ export class PasswordsComponent implements OnInit {
     }
   }
 
+  get groupedEntries(): { folder: string; items: PasswordMeta[] }[] {
+    const map = new Map<string, PasswordMeta[]>();
+    const list = this.filteredEntries;
+    for (const e of list) {
+      const folder = (e.folder || 'Sin carpeta').trim() || 'Sin carpeta';
+      if (!map.has(folder)) map.set(folder, []);
+      map.get(folder)!.push(e);
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([folder, items]) => ({ folder, items }));
+  }
+
+  trackFolder(_index: number, group: { folder: string }): string {
+    return group.folder;
+  }
+
+  trackEntry(_index: number, entry: PasswordMeta): string {
+    return entry.id;
+  }
+
   async copyText(value: string | undefined, ev?: MouseEvent): Promise<void> {
     if (ev) ev.stopPropagation();
     if (!value) return;
@@ -257,6 +280,39 @@ export class PasswordsComponent implements OnInit {
     this.editingDetail = false;
   }
 
+  strengthLabel(entry: PasswordMeta): 'strong' | 'medium' | 'weak' {
+    const variety = this.countVariety(entry.classMask || 0);
+    const len = entry.length || 0;
+    // Reutilizamos la misma lógica que en PasswordHealth (sin degradar por 2FA aquí)
+    const hasFullVariety = variety >= 4;
+    if ((len >= 20 && variety >= 3) || (len >= 16 && hasFullVariety)) return 'strong';
+    if ((len >= 12 && variety >= 3) || (len >= 14 && variety >= 2)) return 'medium';
+    return 'weak';
+  }
+
+  private countVariety(mask: number): number {
+    let count = 0;
+    if (mask & 1) count++;
+    if (mask & 2) count++;
+    if (mask & 4) count++;
+    if (mask & 8) count++;
+    return count;
+  }
+
+  toggleFolder(folder: string): void {
+    const key = folder || 'Sin carpeta';
+    if (this.collapsedFolders.has(key)) {
+      this.collapsedFolders.delete(key);
+    } else {
+      this.collapsedFolders.add(key);
+    }
+  }
+
+  isFolderCollapsed(folder: string): boolean {
+    const key = folder || 'Sin carpeta';
+    return this.collapsedFolders.has(key);
+  }
+
   startDetailEdit(): void {
     if (!this.selected) return;
     this.editingDetail = true;
@@ -268,6 +324,7 @@ export class PasswordsComponent implements OnInit {
     this.editUsername = this.selected.username || '';
     this.editEmail = this.selected.email || '';
     this.editTwoFactorEnabled = !!this.selected.twoFactorEnabled;
+    this.editFolder = this.selected.folder || '';
 
     // Si ya estaba revelada, usamos ese valor como base
     // (asi al entrar en editar, la ves directamente si ya la habias mostrado)
@@ -302,6 +359,7 @@ export class PasswordsComponent implements OnInit {
       this.editPasswordChangeUrl || '',
       this.editUsername || '',
       this.editEmail || '',
+      this.editFolder || '',
       this.editTwoFactorEnabled
     );
 
