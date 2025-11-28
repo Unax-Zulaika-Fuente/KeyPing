@@ -16,13 +16,13 @@
         (click)="onNavClick($event)"
       >
         <span class="nav-icon">🏠</span>
-        <span>Dashboard</span>
+        <span>{{ 'nav.dashboard' | t }}</span>
       </a>
 
       <a routerLink="/passwords" routerLinkActive="active" class="nav-item" [class.nav-disabled]="locked" (click)="onNavClick($event)">
         <div class="nav-main">
           <span class="nav-icon">🔒</span>
-          <span>Passwords</span>
+          <span>{{ 'nav.passwords' | t }}</span>
         </div>
 
         <span class="nav-badge" *ngIf="passwordCount !== null">
@@ -39,7 +39,7 @@
 
       <a routerLink="/health" routerLinkActive="active" class="nav-item" [class.nav-disabled]="locked" (click)="onNavClick($event)">
         <span class="nav-icon">🛡️</span>
-        <span>Password Health</span>
+        <span>{{ 'nav.health' | t }}</span>
       </a>
 
       <a
@@ -50,14 +50,14 @@
         (click)="onNavClick($event)"
       >
         <span class="nav-icon" >⚙️</span>
-        <span>Settings</span>
+        <span>{{ 'nav.settings' | t }}</span>
       </a>
     </nav>
 
     <div class="sidebar-footer">
       <button type="button" class="lock-button" (click)="onLock()">
         <span class="nav-icon">🔐</span>
-        <span>Bloquear</span>
+        <span>{{ 'nav.lock' | t }}</span>
       </button>
     </div>
   </aside>

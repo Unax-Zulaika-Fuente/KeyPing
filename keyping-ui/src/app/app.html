@@ -5,15 +5,21 @@
 
 <div class="lock-screen" *ngIf="lockState !== 'unlocked'">
   <div class="lock-card">
-    <h2 *ngIf="lockState === 'locked'">Desbloquear</h2>
-    <h2 *ngIf="lockState === 'unset'">Configura tu contraseña maestra</h2>
+    <h2 *ngIf="lockState === 'locked'">{{ 'app.lock.titleLocked' | t }}</h2>
+    <h2 *ngIf="lockState === 'unset'">{{ 'app.lock.titleUnset' | t }}</h2>
     <p class="muted small">
-      La llave se deriva con PBKDF2 y los datos se cifran con AES-GCM en localStorage. Autolock por inactividad.
+      {{ 'app.lock.subtitle' | t }}
     </p>
 
     <form (ngSubmit)="lockState === 'unset' ? onCreateMaster() : onUnlock()" class="lock-form">
       <label>
-        <span>{{ lockState === 'unset' ? 'Contraseña maestra' : 'Introduce tu contraseña' }}</span>
+        <span>
+          {{
+            lockState === 'unset'
+              ? ('app.lock.masterLabel' | t)
+              : ('app.lock.enterLabel' | t)
+          }}
+        </span>
         <input
           type="password"
           [(ngModel)]="masterPassword"
@@ -24,7 +30,7 @@
       </label>
 
       <label *ngIf="lockState === 'unset'">
-        <span>Confirmar contraseña</span>
+        <span>{{ 'app.lock.confirmLabel' | t }}</span>
         <input
           type="password"
           [(ngModel)]="masterPasswordConfirm"
@@ -38,13 +44,17 @@
         <div class="lock-feedback" *ngIf="masterError">
           <div class="chip danger">
             <span *ngIf="masterCooldownLabel; else plainError">
-              {{ masterError }} · {{ masterCooldownLabel }}
+              {{ render(masterError) }} · {{ render(masterCooldownLabel) }}
             </span>
-            <ng-template #plainError>{{ masterError }}</ng-template>
+            <ng-template #plainError>{{ render(masterError) }}</ng-template>
           </div>
         </div>
         <button type="submit" class="btn primary">
-          {{ lockState === 'unset' ? 'Crear y desbloquear' : 'Desbloquear' }}
+          {{
+            lockState === 'unset'
+              ? ('app.lock.btnCreate' | t)
+              : ('app.lock.btnUnlock' | t)
+          }}
         </button>
       </div>
     </form>

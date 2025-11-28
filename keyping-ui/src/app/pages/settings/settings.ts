@@ -1,9 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIf, NgFor, NgClass, NgStyle } from '@angular/common';
 import { ElectronService, VaultImportEntry } from '../../core/electron.service';
 import { MasterLockService } from '../../core/master-lock.service';
 import { PasswordCountService } from '../../core/password-count.service';
+import { I18nService } from '../../core/i18n.service';
+import { Subscription } from 'rxjs';
+import { TranslatePipe } from '../../core/translate.pipe';
 
 type MergeReason = 'new' | 'conflict' | 'existing';
 
@@ -16,17 +19,17 @@ type MergePreviewItem = {
   reason: MergeReason;
 };
 
-type StatusMsg = { type: 'success' | 'error' | 'info'; text: string };
+type StatusMsg = { type: 'success' | 'error' | 'info'; key: string; params?: Record<string, string | number> };
 type TipRow = { label: string; from: string; to: string; tone: 'add' | 'remove' | 'change' | 'same' };
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [FormsModule, NgIf, NgFor, NgClass, NgStyle],
+  imports: [FormsModule, NgIf, NgFor, NgClass, NgStyle, TranslatePipe],
   templateUrl: './settings.html',
   styleUrls: ['./settings.scss']
 })
-export class SettingsComponent implements OnInit {
+export class SettingsComponent implements OnInit, OnDestroy {
   masterForm = { current: '', next: '', confirm: '' };
   masterMessage?: StatusMsg;
 
@@ -63,11 +66,13 @@ export class SettingsComponent implements OnInit {
   private currentEntries: VaultImportEntry[] = [];
   confirmModal = { visible: false, countdown: 5, mode: 'overwrite' as 'overwrite' | 'merge' };
   private countdownTimer?: any;
+  private langSub?: Subscription;
 
   constructor(
     private es: ElectronService,
     private master: MasterLockService,
-    private passwordCountSvc: PasswordCountService
+    private passwordCountSvc: PasswordCountService,
+    private i18n: I18nService
   ) {}
 
   ngOnInit(): void {
@@ -77,31 +82,39 @@ export class SettingsComponent implements OnInit {
     this.baseDelaySeconds = Math.round(policy.baseDelayMs / 1000);
     this.growthFactor = policy.growthFactor;
     this.loadCurrentVaultIds();
+    this.language = this.i18n.currentLanguage;
+    this.langSub = this.i18n.language$.subscribe(lang => {
+      this.language = lang;
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.langSub?.unsubscribe();
   }
 
   async onUpdateMaster(): Promise<void> {
     this.masterMessage = undefined;
     const { current, next, confirm } = this.masterForm;
     if (!current || !next || !confirm) {
-      this.masterMessage = { type: 'error', text: 'Rellena los tres campos.' };
+      this.masterMessage = { type: 'error', key: 'settings.master.error.fill' };
       return;
     }
     if (next.length < 8) {
-      this.masterMessage = { type: 'error', text: 'La nueva contrasena debe tener minimo 8 caracteres.' };
+      this.masterMessage = { type: 'error', key: 'settings.master.error.min' };
       return;
     }
     if (next !== confirm) {
-      this.masterMessage = { type: 'error', text: 'La confirmacion no coincide.' };
+      this.masterMessage = { type: 'error', key: 'settings.master.error.confirm' };
       return;
     }
 
     const ok = await this.master.rotateMaster(current, next);
     if (!ok) {
-      this.masterMessage = { type: 'error', text: 'La contrasena actual no es correcta o hay un bloqueo temporal.' };
+      this.masterMessage = { type: 'error', key: 'settings.master.error.invalid' };
       return;
     }
 
-    this.masterMessage = { type: 'success', text: 'Contrasena maestra actualizada. Se ha bloqueado para reingresar con la nueva clave.' };
+    this.masterMessage = { type: 'success', key: 'settings.master.success' };
     this.masterForm = { current: '', next: '', confirm: '' };
   }
 
@@ -113,7 +126,7 @@ export class SettingsComponent implements OnInit {
   onSaveAutoLock(): void {
     this.master.setAutoLockMinutes(this.autoLockMinutes);
     this.autoLockMinutes = this.master.getAutoLockMinutes();
-    this.autoLockMessage = `Autobloqueo ajustado a ${this.autoLockMinutes} minutos de inactividad.`;
+    this.autoLockMessage = this.t('settings.autolock.saved', { value: this.autoLockMinutes });
   }
 
   onSaveAttempts(): void {
@@ -122,7 +135,11 @@ export class SettingsComponent implements OnInit {
       this.baseDelaySeconds * 1000,
       this.growthFactor
     );
-    this.attemptMessage = `Intentos libres: ${this.freeAttempts}. Despues, delay inicial ${this.baseDelaySeconds}s creciendo x${this.growthFactor}.`;
+    this.attemptMessage = this.t('settings.attempts.saved', {
+      free: this.freeAttempts,
+      delay: this.baseDelaySeconds,
+      growth: this.growthFactor
+    });
   }
 
   get delayPreview(): number[] {
@@ -142,14 +159,15 @@ export class SettingsComponent implements OnInit {
   }
 
   reasonLabel(reason: MergeReason): string {
-    if (reason === 'new') return 'Nuevo';
-    if (reason === 'conflict') return 'Conflicto';
-    return 'Duplicado';
+    if (reason === 'new') return this.t('settings.import.reason.new');
+    if (reason === 'conflict') return this.t('settings.import.reason.conflict');
+    return this.t('settings.import.reason.duplicate');
   }
 
-  onLanguageChange(): void {
-    const label = this.language === 'en' ? 'English' : this.language === 'fr' ? 'Francais' : 'Espanol';
-    this.languageMessage = `Idioma preferido: ${label}.`;
+  async onLanguageChange(): Promise<void> {
+    await this.i18n.use(this.language);
+    const label = this.languageLabel(this.language);
+    this.languageMessage = this.i18n.translate('settings.language.saved', { lang: label });
   }
 
   async onExportVault(password: string): Promise<void> {
@@ -165,10 +183,10 @@ export class SettingsComponent implements OnInit {
       a.download = res.filename || 'keyping-vault.kpenc';
       a.click();
       URL.revokeObjectURL(url);
-      this.exportMessage = 'Vault exportado y cifrado con tu contrasena.';
+      this.exportMessage = this.t('settings.export.success');
     } catch (err) {
       console.error('[settings] export error', err);
-      this.exportMessage = 'No se pudo exportar el vault.';
+      this.exportMessage = this.t('settings.export.error');
     } finally {
       this.exporting = false;
     }
@@ -186,12 +204,12 @@ export class SettingsComponent implements OnInit {
 
   async confirmExport(): Promise<void> {
     if (!this.exportModal.password.trim()) {
-      this.exportModal.error = 'Introduce tu contrasena maestra.';
+      this.exportModal.error = this.t('settings.export.modal.errorRequired');
       return;
     }
     const ok = await this.master.verifyMaster(this.exportModal.password.trim());
     if (!ok) {
-      this.exportModal.error = 'Contrasena maestra incorrecta.';
+      this.exportModal.error = this.t('settings.export.modal.errorInvalid');
       return;
     }
 
@@ -237,7 +255,7 @@ export class SettingsComponent implements OnInit {
 
       if (parsed.requiresPassword) {
         this.mergePreview = [];
-        this.importMessage = 'Archivo cifrado: introduce la contrasena usada al exportar.';
+        this.importMessage = this.t('settings.import.msg.encrypted');
         this.importState = 'info';
         return;
       }
@@ -252,18 +270,18 @@ export class SettingsComponent implements OnInit {
       }));
 
       if (this.importMode === 'overwrite') {
-        this.importMessage = 'Archivo listo. Se sobrescribira el vault actual.';
+        this.importMessage = this.t('settings.import.msg.readyOverwrite');
         this.importState = 'success';
       } else {
         const count = this.mergePreview.length;
         this.importMessage = count
-          ? `Vista previa lista: ${count} contrasenas para fusionar.`
-          : 'No se encontraron contrasenas en el archivo.';
+          ? this.t('settings.import.msg.previewMerge', { count })
+          : this.t('settings.import.msg.emptyFile');
         this.importState = count ? 'success' : 'info';
       }
     } catch (err) {
       console.error('[settings] import parse error', err);
-      this.importMessage = 'No se pudo leer el archivo. Asegurate de que sea el archivo de importacion generado.';
+      this.importMessage = this.t('settings.import.msg.readError');
       this.mergePreview = [];
       this.importEntries = [];
       this.importEncrypted = undefined;
@@ -276,7 +294,7 @@ export class SettingsComponent implements OnInit {
 
   async onUnlockImport(): Promise<void> {
     if (!this.rawImportText || !this.importPassword.trim()) {
-      this.importPasswordError = 'Introduce la contrasena del backup.';
+      this.importPasswordError = this.t('settings.import.masterRequired');
       return;
     }
     this.importPasswordError = undefined;
@@ -295,12 +313,12 @@ export class SettingsComponent implements OnInit {
 
       const count = this.mergePreview.length;
       this.importMessage = count
-        ? `Vista previa lista: ${count} contrasenas para fusionar.`
-        : 'No se encontraron contrasenas en el archivo.';
+        ? this.t('settings.import.msg.previewMerge', { count })
+        : this.t('settings.import.msg.emptyFile');
       this.importState = count ? 'success' : 'info';
     } catch (err) {
       console.error('[settings] import unlock error', err);
-      this.importMessage = 'No se pudo descifrar el backup. Revisa la contrasena.';
+      this.importMessage = this.t('settings.import.msg.unlockError');
       this.importState = 'error';
     }
   }
@@ -312,15 +330,15 @@ export class SettingsComponent implements OnInit {
     }
 
     if (!this.mergePreview.length) {
-      this.importMessage = 'Carga un archivo para elegir que fusionar.';
+      this.importMessage = this.t('settings.import.msg.mergeEmpty');
       this.importState = 'info';
       return;
     }
 
     const selected = this.mergePreview.filter(item => item.selected).length;
     this.importMessage = selected
-      ? `Fusionaras ${selected} contrasenas del archivo importado.`
-      : 'Has descartado todas las nuevas contrasenas.';
+      ? this.t('settings.import.msg.mergeSelected', { count: selected })
+      : this.t('settings.import.msg.mergeNone');
     this.importState = selected ? 'success' : 'info';
 
     if (selected > 0) {
@@ -431,10 +449,10 @@ export class SettingsComponent implements OnInit {
       rows.push({ label, from: displayFrom, to: displayTo, tone });
     };
 
-    addRow('Label', curr?.label, incoming.label || (incoming as any).title || (incoming as any).name);
-    addRow('Usuario', (curr as any)?.username, (incoming as any)?.username);
-    addRow('Email', (curr as any)?.email, (incoming as any)?.email);
-    addRow('Login', (curr as any)?.loginUrl, (incoming as any)?.loginUrl);
+    addRow(this.t('settings.tip.label'), curr?.label, incoming.label || (incoming as any).title || (incoming as any).name);
+    addRow(this.t('settings.tip.username'), (curr as any)?.username, (incoming as any)?.username);
+    addRow(this.t('settings.tip.email'), (curr as any)?.email, (incoming as any)?.email);
+    addRow(this.t('settings.tip.login'), (curr as any)?.loginUrl, (incoming as any)?.loginUrl);
 
     return rows;
   }
@@ -454,13 +472,13 @@ export class SettingsComponent implements OnInit {
     this.importing = true;
     try {
       if (mode === 'overwrite' && !this.importFilename) {
-        this.importMessage = 'Selecciona un archivo para sobrescribir el vault.';
+        this.importMessage = this.t('settings.import.msg.needFile');
         this.importState = 'info';
         return;
       }
 
       if (this.importSource === 'master' && !this.importEntries.length) {
-        this.importMessage = 'Introduce la contrasena y pulsa \"Desbloquear backup\" para previsualizar.';
+        this.importMessage = this.t('settings.import.msg.masterHint');
         this.importState = 'info';
         return;
       }
@@ -471,10 +489,12 @@ export class SettingsComponent implements OnInit {
               .map((item, idx) => {
                 if (!item.selected) return null;
                 const entry = { ...this.importEntries[idx] };
+                const baseLabel = entry.label || entry.username || entry.email || this.t('settings.import.entryFallback');
+                entry.label = baseLabel;
                 if (item.reason === 'conflict') {
-                  entry.label = `${entry.label || entry.username || entry.email || 'Entrada'} - Conflicto`;
+                  entry.label = `${baseLabel} - ${this.t('settings.import.conflictSuffix')}`;
                 } else if (item.reason === 'existing') {
-                  entry.label = `${entry.label || entry.username || entry.email || 'Entrada'} - Duplicado`;
+                  entry.label = `${baseLabel} - ${this.t('settings.import.duplicateSuffix')}`;
                 }
                 return entry;
               })
@@ -501,14 +521,14 @@ export class SettingsComponent implements OnInit {
       this.importState = 'success';
       this.importMessage =
         mode === 'overwrite'
-          ? `Vault sobrescrito (${res.imported} entradas).`
-          : `Fusionadas ${res.imported} contrasenas nuevas.`;
+          ? this.t('settings.import.msg.doneOverwrite', { count: res.imported })
+          : this.t('settings.import.msg.doneMerge', { count: res.imported });
       await this.passwordCountSvc.refreshFromDisk();
       await this.loadCurrentVaultIds();
     } catch (err) {
       console.error('[settings] import error', err);
       this.importState = 'error';
-      this.importMessage = 'No se pudo importar el archivo.';
+      this.importMessage = this.t('settings.import.msg.fail');
     } finally {
       this.importing = false;
     }
@@ -624,5 +644,20 @@ export class SettingsComponent implements OnInit {
     if (isDate) return a === b;
     const norm = (x: any) => (x ?? '').toString().trim().toLowerCase();
     return norm(a) === norm(b);
+  }
+
+  renderMsg(msg?: StatusMsg): string {
+    if (!msg) return '';
+    return this.t(msg.key, msg.params);
+  }
+
+  private t(key: string, params?: Record<string, string | number>): string {
+    return this.i18n.translate(key, params);
+  }
+
+  private languageLabel(lang: string): string {
+    const key = `language.name.${lang}`;
+    const value = this.i18n.translate(key);
+    return value === key ? lang.toUpperCase() : value;
   }
 }

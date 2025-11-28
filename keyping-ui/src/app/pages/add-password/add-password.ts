@@ -1,14 +1,18 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIf, NgClass } from '@angular/common';
+import { Router } from '@angular/router';
 import { ElectronService, CheckResult } from '../../core/electron.service';
 import { PasswordCountService } from '../../core/password-count.service';
-import { Router } from '@angular/router';
+import { TranslatePipe } from '../../core/translate.pipe';
+import { I18nService } from '../../core/i18n.service';
+
+type AlertMsg = { level: CheckResult['level']; title: string; message: string };
 
 @Component({
   selector: 'app-add-password',
   standalone: true,
-  imports: [FormsModule, NgIf, NgClass],
+  imports: [FormsModule, NgIf, NgClass, TranslatePipe],
   templateUrl: './add-password.html',
   styleUrls: ['./add-password.scss']
 })
@@ -22,29 +26,35 @@ export class AddPasswordComponent {
   folder = '';
   twoFactorEnabled = false;
   passwordError = false;
-  alert?: { level: CheckResult['level']; title: string; message: string };
+  alert?: AlertMsg;
   private timer?: any;
 
   constructor(
     private es: ElectronService,
     private passwordCountSvc: PasswordCountService,
-    private router: Router
+    private router: Router,
+    private i18n: I18nService
   ) {}
 
   color(level: CheckResult['level']): string {
     if (level === 'danger') return '#ff6b6b';
-    if (level === 'warn')   return '#ffcc66';
+    if (level === 'warn') return '#ffcc66';
     return '#4cd964';
   }
 
   async onCheck(): Promise<void> {
-    if (!this.pwd) { this.alert = undefined; return; }
+    if (!this.pwd) {
+      this.alert = undefined;
+      return;
+    }
     const res = await this.es.checkCandidate(this.pwd);
     const title =
-      res.level === 'danger' ? 'Contraseña muy insegura' :
-      res.level === 'warn'   ? 'Contraseña débil' :
-                               'Contraseña sólida';
-    const message = res.reasons.length ? res.reasons.join(', ') : 'Sin problemas detectados.';
+      res.level === 'danger'
+        ? this.t('add.alert.danger')
+        : res.level === 'warn'
+          ? this.t('add.alert.warn')
+          : this.t('add.alert.ok');
+    const message = res.reasons.length ? res.reasons.join(', ') : this.t('common.noIssues');
     this.alert = { level: res.level, title, message };
   }
 
@@ -61,41 +71,44 @@ export class AddPasswordComponent {
   }
 
   async onSave(): Promise<void> {
-      if (!this.pwd) {
-        this.passwordError = true;
-        return;
-      }
-      this.passwordError = false;
-
-      await this.es.savePassword(
-        this.pwd,
-        this.label || undefined,
-        this.loginUrl || undefined,
-        this.passwordChangeUrl || undefined,
-        this.username || undefined,
-        this.email || undefined,
-        this.folder || undefined,
-        this.twoFactorEnabled
-      );
-
-      await this.passwordCountSvc.refreshFromDisk();
-
-      console.log('[renderer] saved password meta');
-      this.pwd = '';
-      this.label = '';
-      this.loginUrl = '';
-      this.passwordChangeUrl = '';
-      this.username = '';
-      this.email = '';
-      this.folder = '';
-      this.twoFactorEnabled = false;
-      this.passwordError = false;
-      this.alert = undefined;
-
-      await this.router.navigate(['/passwords']);
+    if (!this.pwd) {
+      this.passwordError = true;
+      return;
     }
+    this.passwordError = false;
 
-    onCancel(): void {
-      this.router.navigate(['/passwords']);
-    }
+    await this.es.savePassword(
+      this.pwd,
+      this.label || undefined,
+      this.loginUrl || undefined,
+      this.passwordChangeUrl || undefined,
+      this.username || undefined,
+      this.email || undefined,
+      this.folder || undefined,
+      this.twoFactorEnabled
+    );
+
+    await this.passwordCountSvc.refreshFromDisk();
+
+    this.pwd = '';
+    this.label = '';
+    this.loginUrl = '';
+    this.passwordChangeUrl = '';
+    this.username = '';
+    this.email = '';
+    this.folder = '';
+    this.twoFactorEnabled = false;
+    this.passwordError = false;
+    this.alert = undefined;
+
+    await this.router.navigate(['/passwords']);
+  }
+
+  onCancel(): void {
+    this.router.navigate(['/passwords']);
+  }
+
+  private t(key: string, params?: Record<string, string | number>): string {
+    return this.i18n.translate(key, params);
+  }
 }

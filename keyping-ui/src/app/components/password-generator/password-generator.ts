@@ -1,11 +1,12 @@
 import { Component, ElementRef, HostListener, OnDestroy, AfterViewInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIf, NgStyle } from '@angular/common';
+import { TranslatePipe } from '../../core/translate.pipe';
 
 @Component({
   selector: 'kp-password-generator',
   standalone: true,
-  imports: [FormsModule, NgIf, NgStyle],
+  imports: [FormsModule, NgIf, NgStyle, TranslatePipe],
   templateUrl: './password-generator.html',
   styleUrls: ['./password-generator.scss']
 })

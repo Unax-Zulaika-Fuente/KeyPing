@@ -4,22 +4,24 @@ import { HeaderComponent } from './components/header/header';
 import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { MasterLockService, MasterState } from './core/master-lock.service';
+import { TranslatePipe } from './core/translate.pipe';
+import { I18nService } from './core/i18n.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, HeaderComponent, FormsModule, NgIf],
+  imports: [RouterOutlet, HeaderComponent, FormsModule, NgIf, TranslatePipe],
   templateUrl: './app.html'
 })
 export class AppComponent implements OnInit {
   lockState: MasterState = 'locked';
-  masterError: string | null = null;
-  masterCooldownLabel: string | null = null;
+  masterError: { key: string; params?: Record<string, string | number> } | null = null;
+  masterCooldownLabel: { key: string; params?: Record<string, string | number> } | null = null;
   private cooldownTimer?: any;
   masterPassword = '';
   masterPasswordConfirm = '';
 
-  constructor(private master: MasterLockService) {}
+  constructor(private master: MasterLockService, private i18n: I18nService) {}
 
   async ngOnInit(): Promise<void> {
     this.lockState = await this.master.init();
@@ -36,9 +38,9 @@ export class AppComponent implements OnInit {
       const wait = this.master.getCooldownSeconds();
       if (wait > 0) {
         this.startCooldownCountdown();
-        this.masterError = 'Demasiados intentos';
+        this.masterError = { key: 'app.lock.tooMany' };
       } else {
-        this.masterError = 'Contrase\u00f1a incorrecta';
+        this.masterError = { key: 'app.lock.invalid' };
       }
       return;
     }
@@ -50,11 +52,11 @@ export class AppComponent implements OnInit {
   async onCreateMaster(): Promise<void> {
     this.masterError = null;
     if (this.masterPassword.length < 8) {
-      this.masterError = 'Usa al menos 8 caracteres';
+      this.masterError = { key: 'app.lock.minLength' };
       return;
     }
     if (this.masterPassword !== this.masterPasswordConfirm) {
-      this.masterError = 'Las contraseñas no coinciden';
+      this.masterError = { key: 'app.lock.mismatch' };
       return;
     }
     await this.master.setMaster(this.masterPassword);
@@ -78,10 +80,15 @@ export class AppComponent implements OnInit {
         clearInterval(this.cooldownTimer);
         return;
       }
-      this.masterCooldownLabel = `${seconds}s para reintentar`;
+      this.masterCooldownLabel = { key: 'app.lock.cooldown', params: { seconds } };
     };
     update();
     clearInterval(this.cooldownTimer);
     this.cooldownTimer = setInterval(update, 1000);
+  }
+
+  render(msg: { key: string; params?: Record<string, string | number> } | null): string {
+    if (!msg) return '';
+    return this.i18n.translate(msg.key, msg.params);
   }
 }

@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { NgFor, NgIf, NgClass } from '@angular/common';
-import { ElectronService, PasswordMeta } from '../../core/electron.service';
 import { Router } from '@angular/router';
+import { ElectronService, PasswordMeta } from '../../core/electron.service';
+import { TranslatePipe } from '../../core/translate.pipe';
+import { I18nService } from '../../core/i18n.service';
 
 type StrengthLevel = 'strong' | 'medium' | 'weak';
 
@@ -21,7 +23,7 @@ type DuplicateGroup = {
 @Component({
   selector: 'app-password-health',
   standalone: true,
-  imports: [NgFor, NgIf, NgClass],
+  imports: [NgFor, NgIf, NgClass, TranslatePipe],
   templateUrl: './password-health.html',
   styleUrls: ['./password-health.scss']
 })
@@ -41,7 +43,7 @@ export class PasswordHealthComponent implements OnInit {
   duplicateEntries = 0;
 
   score = 0;
-  scoreLabel = 'Moderado';
+  scoreLabel = '';
   readonly scoreRadius = 46;
 
   issues: HealthIssue[] = [];
@@ -49,7 +51,8 @@ export class PasswordHealthComponent implements OnInit {
 
   constructor(
     private es: ElectronService,
-    private router: Router
+    private router: Router,
+    private i18n: I18nService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -137,9 +140,9 @@ export class PasswordHealthComponent implements OnInit {
   }
 
   getStrength(level: StrengthLevel): string {
-    if (level === 'strong') return 'Fuerte';
-    if (level === 'medium') return 'Media';
-    return 'Débil';
+    if (level === 'strong') return this.t('health.level.strong');
+    if (level === 'medium') return this.t('health.level.medium');
+    return this.t('health.level.weak');
   }
 
   severityClass(severity: number): string {
@@ -169,25 +172,25 @@ export class PasswordHealthComponent implements OnInit {
 
       if (len < 10) {
         severity += 40;
-        reasons.push('Demasiado corta (<10)');
+        reasons.push(this.t('health.reason.short'));
       }
       if (variety < 3) {
         severity += 25;
-        reasons.push('Baja variedad de caracteres');
+        reasons.push(this.t('health.reason.lowVariety'));
       }
       if (!meta.twoFactorEnabled) {
         severity += 10;
-        reasons.push('2FA deshabilitado');
+        reasons.push(this.t('health.reason.no2fa'));
       }
       if (level === 'weak') {
         severity += 20;
-        reasons.push('Contraseña débil');
+        reasons.push(this.t('health.reason.weak'));
       }
 
       const dupGroup = this.findDuplicateGroup(plain);
       if (dupGroup) {
         severity += 60;
-        reasons.push(`Duplicada (${dupGroup.entries.length} coincidencias)`);
+        reasons.push(this.t('health.reason.duplicate', { count: dupGroup.entries.length }));
       }
 
       if (reasons.length > 0) {
@@ -232,7 +235,7 @@ export class PasswordHealthComponent implements OnInit {
   private computeScore(): void {
     if (this.total === 0) {
       this.score = 0;
-      this.scoreLabel = 'Sin datos';
+      this.scoreLabel = this.t('health.score.noData');
       return;
     }
 
@@ -247,10 +250,10 @@ export class PasswordHealthComponent implements OnInit {
     const raw = 100 - weakPenalty - shortPenalty - varietyPenalty - twoFaPenalty - duplicatePenalty;
     this.score = Math.round(Math.max(0, Math.min(100, raw)));
 
-    if (this.score >= 85) this.scoreLabel = 'Excelente';
-    else if (this.score >= 70) this.scoreLabel = 'Muy bien';
-    else if (this.score >= 50) this.scoreLabel = 'Moderado';
-    else this.scoreLabel = 'Riesgoso';
+    if (this.score >= 85) this.scoreLabel = this.t('health.score.excellent');
+    else if (this.score >= 70) this.scoreLabel = this.t('health.score.good');
+    else if (this.score >= 50) this.scoreLabel = this.t('health.score.moderate');
+    else this.scoreLabel = this.t('health.score.risky');
   }
 
   private classifyStrength(length: number, variety: number): StrengthLevel {
@@ -288,5 +291,9 @@ export class PasswordHealthComponent implements OnInit {
   private findDuplicateGroup(plain?: string | null): DuplicateGroup | undefined {
     if (!plain) return undefined;
     return this.duplicateGroups.find(g => g.value === plain);
+  }
+
+  private t(key: string, params?: Record<string, string | number>): string {
+    return this.i18n.translate(key, params);
   }
 }

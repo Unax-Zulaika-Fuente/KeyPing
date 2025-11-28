@@ -15,6 +15,8 @@ import { ElectronService, PasswordMeta } from '../../core/electron.service';
 import { PasswordCountService } from '../../core/password-count.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MasterLockService } from '../../core/master-lock.service';
+import { TranslatePipe } from '../../core/translate.pipe';
+import { I18nService } from '../../core/i18n.service';
 
 @Component({
   selector: 'app-passwords',
@@ -28,7 +30,8 @@ import { MasterLockService } from '../../core/master-lock.service';
     NgSwitchCase,
     NgSwitchDefault,
     FormsModule,
-    NgStyle
+    NgStyle,
+    TranslatePipe
   ],
   templateUrl: './passwords.html',
   styleUrls: ['./passwords.scss']
@@ -83,7 +86,7 @@ export class PasswordsComponent implements OnInit {
   editTwoFactorEnabled = false;
   editFolder = '';
   collapsedFolders = new Set<string>();
-  private readonly defaultFolderLabel = 'Sin carpeta';
+  private readonly defaultFolderKey = '__default__';
   private readonly folderOrderStorageKey = 'keyping.folderOrder';
   private readonly itemOrderStorageKey = 'keyping.itemOrder';
 
@@ -93,7 +96,8 @@ export class PasswordsComponent implements OnInit {
     private passwordCountSvc: PasswordCountService,
     private router: Router,
     private route: ActivatedRoute,
-    private master: MasterLockService
+    private master: MasterLockService,
+    private i18n: I18nService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -189,21 +193,25 @@ export class PasswordsComponent implements OnInit {
   getDateLabel(entry: PasswordMeta): string {
     const hasUpdate = entry.updatedAt && entry.updatedAt !== entry.createdAt;
     const ts = hasUpdate ? entry.updatedAt! : entry.createdAt;
-    const prefix = hasUpdate ? 'Modificado' : 'Creado';
-    return `${prefix}: ${this.fmtDate(ts)}`;
+    const key = hasUpdate ? 'passwords.meta.updated' : 'passwords.meta.created';
+    return this.t(key, { date: this.fmtDate(ts) });
   }
 
   folderDisplayName(folder: string): string {
-    return folder || this.defaultFolderLabel;
+    const normalized = this.normalizeFolder(folder);
+    if (normalized === this.defaultFolderKey) {
+      return this.t('passwords.defaultFolder');
+    }
+    return folder || this.t('passwords.defaultFolder');
   }
 
   twoFactorLabel(entry: PasswordMeta): string {
-    return entry.twoFactorEnabled ? 'Habilitado' : 'Deshabilitado';
+    return entry.twoFactorEnabled ? this.t('common.enabled') : this.t('common.disabled');
   }
 
   // mascara proporcional a la longitud
   maskPassword(len: number): string {
-    return '•'.repeat(len || 8);
+    return '*'.repeat(len || 8);
   }
 
   getSecondaryLine(entry: PasswordMeta): string | null {
@@ -270,9 +278,7 @@ export class PasswordsComponent implements OnInit {
 
   // ---- ELIMINAR ----
   async onDelete(entry: PasswordMeta): Promise<void> {
-    const ok = confirm(
-      'Delete this password from the active list? Historical pattern stays for similarity checks.'
-    );
+    const ok = confirm(this.t('passwords.confirm.delete'));
     if (!ok) return;
 
     await this.es.deletePassword(entry.id);
@@ -555,7 +561,11 @@ export class PasswordsComponent implements OnInit {
   // --- ORDEN PERSONALIZADO ---
   private normalizeFolder(folder?: string): string {
     const clean = (folder || '').trim();
-    return clean || this.defaultFolderLabel;
+    const lower = clean.toLowerCase();
+    if (!clean || lower === 'sin carpeta' || lower === 'no folder') {
+      return this.defaultFolderKey;
+    }
+    return clean;
   }
 
   private loadPersistedOrdering(): void {
@@ -762,7 +772,7 @@ export class PasswordsComponent implements OnInit {
 
     const sourceFolder = this.normalizeFolder(entry.folder);
     const destFolder = this.normalizeFolder(targetFolder);
-    const storageFolder = destFolder === this.defaultFolderLabel ? '' : destFolder;
+    const storageFolder = destFolder === this.defaultFolderKey ? '' : destFolder;
 
     const destBaseOrder = this.itemOrder[destFolder] || this.getOrderedIdsForFolder(destFolder);
     const fromIdx = destBaseOrder.indexOf(entryId);
@@ -841,7 +851,8 @@ export class PasswordsComponent implements OnInit {
       return;
     }
 
-    const ok = confirm(`Eliminar la carpeta "${folderKey}" y mover sus contraseñas a "Sin carpeta"?`);
+    const label = this.folderDisplayName(folderKey);
+    const ok = confirm(this.t('passwords.folder.deleteConfirm', { folder: label, target: this.t('passwords.defaultFolder') }));
     if (!ok) {
       this.closeFolderMenu();
       return;
@@ -867,7 +878,7 @@ export class PasswordsComponent implements OnInit {
   startRename(folderLabel: string): void {
     const key = this.normalizeFolder(folderLabel);
     this.renamingFolder = key;
-    this.renameValue = key;
+    this.renameValue = key === this.defaultFolderKey ? '' : folderLabel;
   }
 
   cancelRename(): void {
@@ -891,7 +902,7 @@ export class PasswordsComponent implements OnInit {
 
     const trimmed = (newName || '').trim();
     if (!trimmed) {
-      alert('El nombre no puede estar vacio.');
+      alert(this.t('passwords.folder.renameEmpty'));
       return;
     }
 
@@ -979,5 +990,9 @@ export class PasswordsComponent implements OnInit {
       this.dragGhostEl.remove();
       this.dragGhostEl = null;
     }
+  }
+
+  private t(key: string, params?: Record<string, string | number>): string {
+    return this.i18n.translate(key, params);
   }
 }

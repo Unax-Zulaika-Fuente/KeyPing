@@ -1,13 +1,13 @@
 <div class="page settings-page">
   <div class="page-header">
     <div>
-      <p class="eyebrow">Settings</p>
-      <h1>Configuracion</h1>
-      <p class="muted">Ajusta seguridad, preferencias y copias de seguridad del vault.</p>
+      <p class="eyebrow">{{ 'settings.header.eyebrow' | t }}</p>
+      <h1>{{ 'settings.header.title' | t }}</h1>
+      <p class="muted">{{ 'settings.header.subtitle' | t }}</p>
     </div>
     <div class="pill pill-muted">
       <span class="status-dot"></span>
-      Local &amp; cifrado
+      {{ 'settings.header.badge' | t }}
     </div>
   </div>
 
@@ -15,51 +15,51 @@
     <section class="card settings-card security-card">
       <div class="section-head">
         <div>
-          <p class="eyebrow small">Seguridad</p>
-          <h2>Proteccion del vault</h2>
-          <p class="muted small">Cambia la contrasena maestra, ajusta auto-bloqueo y limita intentos fallidos.</p>
+          <p class="eyebrow small">{{ 'settings.security.eyebrow' | t }}</p>
+          <h2>{{ 'settings.security.title' | t }}</h2>
+          <p class="muted small">{{ 'settings.security.subtitle' | t }}</p>
         </div>
-        <div class="chip chip-strong">AES-GCM local</div>
+        <div class="chip chip-strong">{{ 'settings.security.badge' | t }}</div>
       </div>
 
       <div class="setting-block">
         <div class="block-head">
           <div>
-            <div class="block-title">Cambiar contrasena maestra</div>
-            <p class="muted tiny">La llave no sale de tu equipo. Reencripta el vault existente.</p>
+            <div class="block-title">{{ 'settings.master.title' | t }}</div>
+            <p class="muted tiny">{{ 'settings.master.subtitle' | t }}</p>
           </div>
-          <button type="button" class="btn ghost tiny" (click)="resetMasterForm()">Limpiar</button>
+          <button type="button" class="btn ghost tiny" (click)="resetMasterForm()">{{ 'settings.master.clear' | t }}</button>
         </div>
         <div class="form-grid">
           <label class="field">
-            <span class="label">Actual</span>
-            <input type="password" [(ngModel)]="masterForm.current" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;" />
+            <span class="label">{{ 'settings.master.current' | t }}</span>
+            <input type="password" [(ngModel)]="masterForm.current" [placeholder]="'settings.master.currentPlaceholder' | t" />
           </label>
           <label class="field">
-            <span class="label">Nueva</span>
+            <span class="label">{{ 'settings.master.new' | t }}</span>
             <input
               type="password"
               [(ngModel)]="masterForm.next"
-              placeholder="Minimo 8 caracteres"
+              [placeholder]="'settings.master.newPlaceholder' | t"
               (input)="masterMessage = undefined"
             />
           </label>
           <label class="field">
-            <span class="label">Confirmar</span>
+            <span class="label">{{ 'settings.master.confirm' | t }}</span>
             <input
               type="password"
               [(ngModel)]="masterForm.confirm"
-              placeholder="Repite la nueva"
+              [placeholder]="'settings.master.confirmPlaceholder' | t"
               (input)="masterMessage = undefined"
             />
           </label>
         </div>
         <div class="block-actions">
-          <span class="muted tiny">Requerira desbloquear de nuevo tras el cambio.</span>
-          <button type="button" class="btn primary" (click)="onUpdateMaster()">Actualizar clave</button>
+          <span class="muted tiny">{{ 'settings.master.note' | t }}</span>
+          <button type="button" class="btn primary" (click)="onUpdateMaster()">{{ 'settings.master.action' | t }}</button>
         </div>
         <div class="inline-alert" *ngIf="masterMessage" [ngClass]="masterMessage.type">
-          {{ masterMessage.text }}
+          {{ renderMsg(masterMessage) }}
         </div>
       </div>
 
@@ -68,10 +68,10 @@
       <div class="setting-block">
         <div class="block-head">
           <div>
-            <div class="block-title">Tiempo de auto-bloqueo</div>
-            <p class="muted tiny">Define cuantos minutos de inactividad cierran el vault.</p>
+            <div class="block-title">{{ 'settings.autolock.title' | t }}</div>
+            <p class="muted tiny">{{ 'settings.autolock.subtitle' | t }}</p>
           </div>
-          <div class="pill pill-muted">{{ autoLockMinutes }} min</div>
+          <div class="pill pill-muted">{{ 'settings.autolock.value' | t:{ value: autoLockMinutes } }}</div>
         </div>
         <div class="autolock-row">
           <input
@@ -89,8 +89,8 @@
           </div>
         </div>
         <div class="block-actions">
-          <span class="muted tiny">Despues de {{ autoLockMinutes }} minutos, se bloquea automaticamente.</span>
-          <button type="button" class="btn ghost" (click)="onSaveAutoLock()">Guardar tiempo</button>
+          <span class="muted tiny">{{ 'settings.autolock.note' | t:{ value: autoLockMinutes } }}</span>
+          <button type="button" class="btn ghost" (click)="onSaveAutoLock()">{{ 'settings.autolock.action' | t }}</button>
         </div>
         <div class="inline-alert success" *ngIf="autoLockMessage">
           {{ autoLockMessage }}
@@ -102,13 +102,13 @@
       <div class="setting-block">
         <div class="block-head">
           <div>
-            <div class="block-title">Intentos fallidos y delay</div>
-            <p class="muted tiny">3 intentos libres, luego delay exponencial creciente.</p>
+            <div class="block-title">{{ 'settings.attempts.title' | t }}</div>
+            <p class="muted tiny">{{ 'settings.attempts.subtitle' | t }}</p>
           </div>
         </div>
         <div class="attempts-grid">
           <label class="field">
-            <span class="label">Intentos sin delay</span>
+            <span class="label">{{ 'settings.attempts.free' | t }}</span>
             <input
               type="number"
               min="0"
@@ -118,7 +118,7 @@
             />
           </label>
           <label class="field">
-            <span class="label">Delay inicial (s)</span>
+            <span class="label">{{ 'settings.attempts.baseDelay' | t }}</span>
             <input
               type="number"
               min="1"
@@ -128,7 +128,7 @@
             />
           </label>
           <label class="field">
-            <span class="label">Factor exponencial (x)</span>
+            <span class="label">{{ 'settings.attempts.growth' | t }}</span>
             <input
               type="number"
               min="1"
@@ -140,12 +140,12 @@
         </div>
         <div class="delay-preview">
           <span class="chip" *ngFor="let d of delayPreview; let i = index">
-            Intento {{ i + 1 }}: {{ d }}s
+            {{ 'settings.attempts.preview' | t:{ index: i + 1, seconds: d } }}
           </span>
         </div>
         <div class="block-actions">
-          <span class="muted tiny">El delay crece exponencialmente tras agotar los intentos libres.</span>
-          <button type="button" class="btn ghost" (click)="onSaveAttempts()">Aplicar politica</button>
+          <span class="muted tiny">{{ 'settings.attempts.note' | t }}</span>
+          <button type="button" class="btn ghost" (click)="onSaveAttempts()">{{ 'settings.attempts.action' | t }}</button>
         </div>
         <div class="inline-alert success" *ngIf="attemptMessage">
           {{ attemptMessage }}
@@ -156,38 +156,31 @@
     <section class="card settings-card preferences-card">
       <div class="section-head">
         <div>
-          <p class="eyebrow small">Preferencias</p>
-          <h2>Idioma y experiencia</h2>
-          <p class="muted small">Ajustes que afectan a la interfaz local.</p>
+          <p class="eyebrow small">{{ 'settings.pref.eyebrow' | t }}</p>
+          <h2>{{ 'settings.pref.title' | t }}</h2>
+          <p class="muted small">{{ 'settings.pref.subtitle' | t }}</p>
         </div>
-        <div class="pill pill-muted">Local</div>
+        <div class="pill pill-muted">{{ 'settings.pref.badge' | t }}</div>
       </div>
 
       <div class="setting-block">
         <div class="block-head">
-          <div class="block-title">Seleccion de idioma</div>
-          <p class="muted tiny">Aplica solo a la UI. No envia datos fuera.</p>
+          <div class="block-title">{{ 'settings.language.title' | t }}</div>
+          <p class="muted tiny">{{ 'settings.language.subtitle' | t }}</p>
         </div>
         <div class="language-options">
           <label class="language-card" [class.active]="language === 'es'">
             <input type="radio" name="lang" value="es" [(ngModel)]="language" (change)="onLanguageChange()" />
             <div>
-              <div class="lang-title">Espanol</div>
-              <p class="muted tiny">Terminologia de seguridad en castellano.</p>
+              <div class="lang-title">{{ 'language.name.es' | t }}</div>
+              <p class="muted tiny">{{ 'settings.language.esDesc' | t }}</p>
             </div>
           </label>
           <label class="language-card" [class.active]="language === 'en'">
             <input type="radio" name="lang" value="en" [(ngModel)]="language" (change)="onLanguageChange()" />
             <div>
-              <div class="lang-title">English</div>
-              <p class="muted tiny">Ideal si mezclas apps en ingles.</p>
-            </div>
-          </label>
-          <label class="language-card" [class.active]="language === 'fr'">
-            <input type="radio" name="lang" value="fr" [(ngModel)]="language" (change)="onLanguageChange()" />
-            <div>
-              <div class="lang-title">Frances</div>
-              <p class="muted tiny">Option pour tests multilingues.</p>
+              <div class="lang-title">{{ 'language.name.en' | t }}</div>
+              <p class="muted tiny">{{ 'settings.language.enDesc' | t }}</p>
             </div>
           </label>
         </div>
@@ -200,21 +193,21 @@
     <section class="card settings-card backups-card">
       <div class="section-head">
         <div>
-          <p class="eyebrow small">Copias de seguridad</p>
-          <h2>Vault Export / Import</h2>
-          <p class="muted small">Exporta cifrado o importa con sobrescritura o fusion asistida.</p>
+          <p class="eyebrow small">{{ 'settings.backup.eyebrow' | t }}</p>
+          <h2>{{ 'settings.backup.title' | t }}</h2>
+          <p class="muted small">{{ 'settings.backup.subtitle' | t }}</p>
         </div>
-        <div class="pill pill-muted">Offline</div>
+        <div class="pill pill-muted">{{ 'settings.backup.badge' | t }}</div>
       </div>
 
-            <div class="setting-block">
+      <div class="setting-block">
         <div class="block-head">
-          <div class="block-title">Exportar vault cifrado</div>
-          <p class="muted tiny">Genera un archivo cifrado con tu clave maestra.</p>
+          <div class="block-title">{{ 'settings.export.title' | t }}</div>
+          <p class="muted tiny">{{ 'settings.export.subtitle' | t }}</p>
         </div>
         <div class="block-actions">
-          <span class="muted tiny">Ideal para backups seguros o migrar de equipo.</span>
-          <button type="button" class="btn primary" (click)="openExportModal()" [disabled]="exporting">Exportar vault</button>
+          <span class="muted tiny">{{ 'settings.export.hint' | t }}</span>
+          <button type="button" class="btn primary" (click)="openExportModal()" [disabled]="exporting">{{ 'settings.export.action' | t }}</button>
         </div>
         <div class="inline-alert success" *ngIf="exportMessage">
           {{ exportMessage }}
@@ -225,23 +218,23 @@
 
       <div class="setting-block">
         <div class="block-head">
-          <div class="block-title">Importar vault</div>
-          <p class="muted tiny">Dos modos: sobrescribir todo o fusionar eligiendo que guardar.</p>
+          <div class="block-title">{{ 'settings.import.title' | t }}</div>
+          <p class="muted tiny">{{ 'settings.import.subtitle' | t }}</p>
         </div>
 
         <div class="import-modes">
           <label class="mode" [class.active]="importMode === 'overwrite'">
             <input type="radio" name="importMode" value="overwrite" [(ngModel)]="importMode" (change)="onModeChange()" />
             <div>
-              <div class="mode-title">Sobrescribir todo</div>
-              <p class="muted tiny">Reemplaza el vault actual por completo.</p>
+              <div class="mode-title">{{ 'settings.import.overwrite.title' | t }}</div>
+              <p class="muted tiny">{{ 'settings.import.overwrite.desc' | t }}</p>
             </div>
           </label>
           <label class="mode" [class.active]="importMode === 'merge'">
             <input type="radio" name="importMode" value="merge" [(ngModel)]="importMode" (change)="onModeChange()" />
             <div>
-              <div class="mode-title">Fusion asistida</div>
-              <p class="muted tiny">Elige contrasenas nuevas a guardar o descartar.</p>
+              <div class="mode-title">{{ 'settings.import.merge.title' | t }}</div>
+              <p class="muted tiny">{{ 'settings.import.merge.desc' | t }}</p>
             </div>
           </label>
         </div>
@@ -249,45 +242,45 @@
         <div class="file-row">
           <label class="btn ghost file-btn">
             <input type="file" accept=".kpenc,.json,.keyping" (change)="onImportFile($event)" />
-            <span>Seleccionar archivo</span>
+            <span>{{ 'settings.import.chooseFile' | t }}</span>
           </label>
           <div class="muted tiny" *ngIf="importFilename; else noFile">
-            Archivo: {{ importFilename }}
+            {{ 'settings.import.filename' | t: { name: importFilename } }}
           </div>
           <ng-template #noFile>
-            <div class="muted tiny">A&uacute;n no has seleccionado archivo.</div>
+            <div class="muted tiny">{{ 'settings.import.noFile' | t }}</div>
           </ng-template>
         </div>
 
         <div class="field" *ngIf="importSource === 'master'">
-          <span class="label">Contrasena del backup cifrado</span>
+          <span class="label">{{ 'settings.import.masterLabel' | t }}</span>
           <input
             type="password"
             [(ngModel)]="importPassword"
-            placeholder="Clave usada al exportar"
+            [placeholder]="'settings.import.masterPlaceholder' | t"
             (input)="importPasswordError = undefined"
           />
           <div class="field-error field-error-inline" *ngIf="importPasswordError">{{ importPasswordError }}</div>
-          <button type="button" class="btn ghost tiny" (click)="onUnlockImport()">Desbloquear backup</button>
+          <button type="button" class="btn ghost tiny" (click)="onUnlockImport()">{{ 'settings.import.unlock' | t }}</button>
         </div>
 
-                <div class="merge-preview" *ngIf="importMode === 'merge'">
+        <div class="merge-preview" *ngIf="importMode === 'merge'">
           <div class="merge-header">
-            <div class="muted tiny">Entradas nuevas detectadas</div>
+            <div class="muted tiny">{{ 'settings.import.mergeHeader' | t }}</div>
             <div class="merge-actions">
               <button type="button" class="btn ghost tiny" (click)="selectAllMerge(true)" [disabled]="!mergePreview.length">
-                Guardar todas
+                {{ 'settings.import.saveAll' | t }}
               </button>
               <button type="button" class="btn ghost tiny" (click)="discardExisting()" [disabled]="!mergePreview.length">
-                Descartar existentes
+                {{ 'settings.import.discardExisting' | t }}
               </button>
               <button type="button" class="btn ghost tiny" (click)="selectAllMerge(false)" [disabled]="!mergePreview.length">
-                Descartar todas
+                {{ 'settings.import.discardAll' | t }}
               </button>
             </div>
           </div>
           <div class="merge-search">
-            <input type="text" [(ngModel)]="mergeFilter" placeholder="Buscar por nombre, usuario o correo" />
+            <input type="text" [(ngModel)]="mergeFilter" [placeholder]="'settings.import.search' | t" />
           </div>
           <div class="merge-list" *ngIf="filteredMergePreview.length; else emptyMerge">
             <div
@@ -313,18 +306,18 @@
             </div>
           </div>
           <ng-template #emptyMerge>
-            <div class="empty-merge muted tiny">No hay resultados en la busqueda.</div>
+            <div class="empty-merge muted tiny">{{ 'settings.import.emptySearch' | t }}</div>
           </ng-template>
         </div>
 <div class="block-actions">
-          <span class="muted tiny">La importacion se aplicara al confirmar.</span>
+          <span class="muted tiny">{{ 'settings.import.note' | t }}</span>
           <button
             type="button"
             class="btn primary"
             (click)="applyImport()"
             [disabled]="importing || (importMode === 'merge' && !mergePreview.length)"
           >
-            Importar
+            {{ 'settings.import.action' | t }}
           </button>
         </div>
         <div class="inline-alert" *ngIf="importMessage" [ngClass]="importState">
@@ -352,42 +345,46 @@
 
 <div class="confirm-backdrop" *ngIf="exportModal.visible">
   <div class="confirm-modal">
-    <h3>Exportar vault</h3>
-    <p class="muted small">Confirma con tu contrasena maestra para generar el backup cifrado.</p>
+    <h3>{{ 'settings.export.modal.title' | t }}</h3>
+    <p class="muted small">{{ 'settings.export.modal.subtitle' | t }}</p>
     <div class="field">
-      <span class="label">Contrasena maestra</span>
+      <span class="label">{{ 'settings.export.modal.label' | t }}</span>
       <input
         type="password"
         [(ngModel)]="exportModal.password"
-        placeholder="Se te pedira esta contrasena al importar"
+        [placeholder]="'settings.export.modal.placeholder' | t"
         (input)="exportModal.error = ''"
       />
       <div class="field-error" *ngIf="exportModal.error">{{ exportModal.error }}</div>
     </div>
     <div class="modal-actions">
-      <button type="button" class="btn ghost" (click)="closeExportModal()">Cancelar</button>
-      <button type="button" class="btn primary" (click)="confirmExport()" [disabled]="exporting">Confirmar y exportar</button>
+      <button type="button" class="btn ghost" (click)="closeExportModal()">{{ 'settings.actions.cancel' | t }}</button>
+      <button type="button" class="btn primary" (click)="confirmExport()" [disabled]="exporting">{{ 'settings.export.modal.confirm' | t }}</button>
     </div>
   </div>
 </div>
 
 <div class="confirm-backdrop" *ngIf="confirmModal.visible">
   <div class="confirm-modal">
-    <h3>{{ confirmModal.mode === 'overwrite' ? 'Sobrescribir vault' : 'Confirmar fusion' }}</h3>
+    <h3>{{ confirmModal.mode === 'overwrite' ? ('settings.import.confirmOverwrite.title' | t) : ('settings.import.confirmMerge.title' | t) }}</h3>
     <p class="muted small">
       {{ confirmModal.mode === 'overwrite'
-        ? 'Se borraran los datos actuales y se reemplazaran por el backup. Esta accion no se puede deshacer.'
-        : 'Aplicaremos la fusion con las entradas seleccionadas.' }}
+        ? ('settings.import.confirmOverwrite.desc' | t)
+        : ('settings.import.confirmMerge.desc' | t) }}
     </p>
     <div class="modal-actions">
-      <button type="button" class="btn ghost" (click)="closeConfirmModal()">Cancelar</button>
+      <button type="button" class="btn ghost" (click)="closeConfirmModal()">{{ 'settings.actions.cancel' | t }}</button>
       <button
         type="button"
         class="btn primary"
         [disabled]="confirmModal.countdown > 0"
         (click)="confirmImport()"
       >
-        {{ confirmModal.countdown > 0 ? 'Confirmar (' + confirmModal.countdown + 's)' : 'Confirmar' }}
+        {{
+          confirmModal.countdown > 0
+            ? ('settings.import.confirmCountdown' | t:{ seconds: confirmModal.countdown })
+            : ('settings.import.confirm' | t)
+        }}
       </button>
     </div>
   </div>
