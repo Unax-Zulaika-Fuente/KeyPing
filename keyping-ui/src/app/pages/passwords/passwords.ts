@@ -367,6 +367,9 @@ export class PasswordsComponent implements OnInit {
           console.error('[renderer] reload revealed password failed', err);
         }
       }
+      if (this.selected) {
+        await this.loadHistory(this.selected.id);
+      }
     }
   }
 
@@ -437,16 +440,28 @@ export class PasswordsComponent implements OnInit {
 
     // 1) Si se ha escrito una nueva contraseña → updatePassword
     if (this.editPwd) {
-      const updated = await this.es.updatePassword(oldId, this.editPwd);
-      const newId = updated.id;
-
-      // si la contraseña estaba revelada, movemos el estado al nuevo id
-      if (this.revealed[oldId]) {
-        this.revealed[newId] = this.editPwd;
-        delete this.revealed[oldId];
+      let currentPlain = this.revealed[oldId];
+      if (!currentPlain) {
+        try {
+          const candidate = await this.es.getPassword(oldId);
+          if (candidate) currentPlain = candidate;
+        } catch (err) {
+          console.error('[renderer] compare password failed', err);
+        }
       }
 
-      currentId = newId;
+      if (currentPlain !== this.editPwd) {
+        const updated = await this.es.updatePassword(oldId, this.editPwd);
+        const newId = updated.id;
+
+        // si la contraseña estaba revelada, movemos el estado al nuevo id
+        if (this.revealed[oldId]) {
+          this.revealed[newId] = this.editPwd;
+          delete this.revealed[oldId];
+        }
+
+        currentId = newId;
+      }
     }
 
     // 2) Actualizar metadata (nombre / URLs) sobre el id actual (nuevo si ha cambiado)
@@ -501,6 +516,9 @@ export class PasswordsComponent implements OnInit {
     this.entries = nextEntries;
     this.selected = nextEntries.find(e => e.id === currentId) || updatedMeta;
     this.master.persistVault(this.entries);
+    if (this.selected) {
+      await this.loadHistory(this.selected.id);
+    }
   }
 
   cancelDetailEdit(): void {
