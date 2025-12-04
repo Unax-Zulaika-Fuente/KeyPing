@@ -89,6 +89,10 @@ export class PasswordsComponent implements OnInit {
   private readonly defaultFolderKey = '__default__';
   private readonly folderOrderStorageKey = 'keyping.folderOrder';
   private readonly itemOrderStorageKey = 'keyping.itemOrder';
+  history: PasswordMeta[] = [];
+  historyLoading = false;
+  historyError?: string;
+  historyModalOpen = false;
 
 
   constructor(
@@ -123,8 +127,27 @@ export class PasswordsComponent implements OnInit {
         this.selected = this.entries.find(e => e.id === previouslySelectedId) || null;
       }
       this.master.persistVault(this.entries);
+      if (this.selected) {
+        await this.loadHistory(this.selected.id);
+      } else {
+        this.history = [];
+      }
     } finally {
       this.loading = false;
+    }
+  }
+
+  private async loadHistory(entryId: string): Promise<void> {
+    this.historyLoading = true;
+    this.historyError = undefined;
+    try {
+      this.history = await this.es.getPasswordHistory(entryId);
+    } catch (err) {
+      console.error('[renderer] history load error', err);
+      this.historyError = this.t('passwords.history.error');
+      this.history = [];
+    } finally {
+      this.historyLoading = false;
     }
   }
 
@@ -348,9 +371,10 @@ export class PasswordsComponent implements OnInit {
   }
 
   // ---- DETALLE ----
-  onSelect(entry: PasswordMeta): void {
+  async onSelect(entry: PasswordMeta): Promise<void> {
     this.selected = entry;
     this.editingDetail = false;
+    await this.loadHistory(entry.id);
   }
 
   strengthLabel(entry: PasswordMeta): 'strong' | 'medium' | 'weak' {
@@ -515,6 +539,46 @@ export class PasswordsComponent implements OnInit {
     } catch (err) {
       console.error('[renderer] getPassword error', err);
     }
+  }
+
+  async onRestoreVersion(entry: PasswordMeta): Promise<void> {
+    try {
+      const restored = await this.es.restorePasswordVersion(entry.id);
+      await this.loadEntries();
+      const match = this.entries.find(e => e.id === restored.id);
+      if (match) {
+        this.selected = match;
+        await this.loadHistory(match.id);
+      }
+      this.master.persistVault(this.entries);
+    } catch (err) {
+      console.error('[renderer] restore version failed', err);
+    }
+  }
+
+  async onClearHistory(): Promise<void> {
+    if (!this.selected) return;
+    const ok = confirm(this.t('passwords.history.confirmClear'));
+    if (!ok) return;
+    try {
+      await this.es.clearPasswordHistory(this.selected.id);
+      await this.loadEntries();
+      if (this.selected) {
+        await this.loadHistory(this.selected.id);
+      }
+      this.master.persistVault(this.entries);
+    } catch (err) {
+      console.error('[renderer] clear history failed', err);
+    }
+  }
+
+  openHistoryModal(): void {
+    if (!this.history.length) return;
+    this.historyModalOpen = true;
+  }
+
+  closeHistoryModal(): void {
+    this.historyModalOpen = false;
   }
 
   // ---- ABRIR URL EN NAVEGADOR ----

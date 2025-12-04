@@ -42,7 +42,36 @@ export type PasswordMeta = {
   passwordChangeUrl?: string;
   username?: string;
   email?: string;
+  active?: boolean;
+  previousId?: string;
 };
+
+export type VaultIntegrityIssueCode =
+  | 'missing-file'
+  | 'read-error'
+  | 'invalid-header'
+  | 'decrypt-failed'
+  | 'invalid-json'
+  | 'invalid-structure'
+  | 'implausible-timestamps';
+
+export type VaultIntegrityIssue = {
+  code: VaultIntegrityIssueCode;
+  count?: number;
+  detail?: string;
+};
+
+export type VaultIntegrityStatus = 'ok' | 'warn' | 'error';
+
+export type VaultIntegrityReport = {
+  status: VaultIntegrityStatus;
+  fileExists: boolean;
+  issues: VaultIntegrityIssue[];
+  entries?: number;
+  checkedAt: number;
+};
+
+export type PasswordHistoryEntry = PasswordMeta;
 
 type KeypingApi = {
   checkCandidate(pwd: string): Promise<CheckResult>;
@@ -64,9 +93,17 @@ type KeypingApi = {
   copySecure?(text: string, ttlMs?: number): Promise<boolean>;
   getPassword(id: string): Promise<string | null>;
   openExternal(url: string): Promise<boolean>;
-  exportVault(mode?: 'native' | 'master', password?: string): Promise<{ base64?: string; payload?: any; filename: string; format: string; enc: string }>;
+  exportVault(mode?: 'native' | 'master', password?: string, includeHistory?: boolean): Promise<{ base64?: string; payload?: any; filename: string; format: string; enc: string }>;
   parseImport(raw: string, password?: string): Promise<VaultImportPreview>;
   importVault(mode: 'overwrite' | 'merge', entries: VaultImportEntry[], encrypted?: string, enc?: 'native' | 'master' | 'plain', password?: string, masterPayload?: any): Promise<{ imported: number; overwritten: boolean }>;
+  getPasswordHistory(id: string): Promise<PasswordHistoryEntry[]>;
+  restorePasswordVersion(id: string): Promise<PasswordHistoryEntry>;
+  deletePasswordVersion(id: string): Promise<boolean>;
+  clearPasswordHistory(id: string): Promise<number>;
+  getHistorySettings(): Promise<{ maxHistoryPerEntry: number }>;
+  updateHistorySettings(maxHistoryPerEntry: number): Promise<{ maxHistoryPerEntry: number }>;
+  compactVault(keepOnlyCurrent?: boolean, maxHistoryPerEntry?: number): Promise<{ removed: number; kept: number; chains: number }>;
+  checkVaultIntegrity(): Promise<VaultIntegrityReport>;
   ping?(): Promise<string>;
 };
 
@@ -142,9 +179,9 @@ export class ElectronService {
     return this.api.getPassword(id);
   }
 
-  async exportVault(mode: 'native' | 'master', password?: string): Promise<{ base64?: string; payload?: any; filename: string; format: string; enc: string }> {
+  async exportVault(mode: 'native' | 'master', password?: string, includeHistory?: boolean): Promise<{ base64?: string; payload?: any; filename: string; format: string; enc: string }> {
     if (!this.api || !this.api.exportVault) throw new Error('No preload API available');
-    return this.api.exportVault(mode, password);
+    return this.api.exportVault(mode, password, includeHistory);
   }
 
   async parseImport(raw: string, password?: string): Promise<VaultImportPreview> {
@@ -155,5 +192,45 @@ export class ElectronService {
   async importVault(mode: 'overwrite' | 'merge', entries: VaultImportEntry[], encrypted?: string, enc?: 'native' | 'master' | 'plain', password?: string, masterPayload?: any): Promise<{ imported: number; overwritten: boolean }> {
     if (!this.api || !this.api.importVault) throw new Error('No preload API available');
     return this.api.importVault(mode, entries, encrypted, enc, password, masterPayload);
+  }
+
+  async getPasswordHistory(id: string): Promise<PasswordHistoryEntry[]> {
+    if (!this.api || !this.api.getPasswordHistory) throw new Error('No preload API available');
+    return this.api.getPasswordHistory(id);
+  }
+
+  async restorePasswordVersion(id: string): Promise<PasswordHistoryEntry> {
+    if (!this.api || !this.api.restorePasswordVersion) throw new Error('No preload API available');
+    return this.api.restorePasswordVersion(id);
+  }
+
+  async deletePasswordVersion(id: string): Promise<boolean> {
+    if (!this.api || !this.api.deletePasswordVersion) throw new Error('No preload API available');
+    return this.api.deletePasswordVersion(id);
+  }
+
+  async clearPasswordHistory(id: string): Promise<number> {
+    if (!this.api || !this.api.clearPasswordHistory) throw new Error('No preload API available');
+    return this.api.clearPasswordHistory(id);
+  }
+
+  async getHistorySettings(): Promise<{ maxHistoryPerEntry: number }> {
+    if (!this.api || !this.api.getHistorySettings) throw new Error('No preload API available');
+    return this.api.getHistorySettings();
+  }
+
+  async updateHistorySettings(maxHistoryPerEntry: number): Promise<{ maxHistoryPerEntry: number }> {
+    if (!this.api || !this.api.updateHistorySettings) throw new Error('No preload API available');
+    return this.api.updateHistorySettings(maxHistoryPerEntry);
+  }
+
+  async compactVault(keepOnlyCurrent?: boolean, maxHistoryPerEntry?: number): Promise<{ removed: number; kept: number; chains: number }> {
+    if (!this.api || !this.api.compactVault) throw new Error('No preload API available');
+    return this.api.compactVault(keepOnlyCurrent, maxHistoryPerEntry);
+  }
+
+  async getVaultIntegrity(): Promise<VaultIntegrityReport> {
+    if (!this.api || !this.api.checkVaultIntegrity) throw new Error('No preload API available');
+    return this.api.checkVaultIntegrity();
   }
 }

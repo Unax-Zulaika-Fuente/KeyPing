@@ -24,3 +24,28 @@ export type VaultEntry = {
 export type VaultData = {
   entries: VaultEntry[];
 };
+
+export type VaultIntegrityIssueCode =
+  | 'missing-file'
+  | 'read-error'
+  | 'invalid-header'
+  | 'decrypt-failed'
+  | 'invalid-json'
+  | 'invalid-structure'
+  | 'implausible-timestamps';
+
+export type VaultIntegrityIssue = {
+  code: VaultIntegrityIssueCode;
+  count?: number;
+  detail?: string;
+};
+
+export type VaultIntegrityStatus = 'ok' | 'warn' | 'error';
+
+export type VaultIntegrityReport = {
+  status: VaultIntegrityStatus;
+  fileExists: boolean;
+  issues: VaultIntegrityIssue[];
+  entries?: number;
+  checkedAt: number;
+};

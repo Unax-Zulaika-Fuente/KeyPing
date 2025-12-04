@@ -47,6 +47,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   exportMessage?: string;
   exporting = false;
   exportModal = { visible: false, password: '', error: '' };
+  exportIncludeHistory = true;
 
   importMode: 'overwrite' | 'merge' = 'overwrite';
   importMessage?: string;
@@ -67,6 +68,14 @@ export class SettingsComponent implements OnInit, OnDestroy {
   confirmModal = { visible: false, countdown: 5, mode: 'overwrite' as 'overwrite' | 'merge' };
   private countdownTimer?: any;
   private langSub?: Subscription;
+  historyLimit = 20;
+  historySettingsMessage?: string;
+  historyCompactMessage?: string;
+  historyKeepMessage?: string;
+  historyBusy = false;
+  historyKeepBusy = false;
+  historyCompactFailed = false;
+  historyKeepFailed = false;
 
   constructor(
     private es: ElectronService,
@@ -86,6 +95,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.langSub = this.i18n.language$.subscribe(lang => {
       this.language = lang;
     });
+    void this.loadHistorySettings();
   }
 
   ngOnDestroy(): void {
@@ -142,6 +152,56 @@ export class SettingsComponent implements OnInit, OnDestroy {
     });
   }
 
+  async onSaveHistoryLimit(): Promise<void> {
+    this.historySettingsMessage = undefined;
+    const limit = Math.max(1, Math.min(200, Math.round(this.historyLimit)));
+    this.historyLimit = limit;
+    try {
+      const res = await this.es.updateHistorySettings(this.historyLimit);
+      this.historyLimit = res.maxHistoryPerEntry;
+      this.historySettingsMessage = this.t('settings.history.saved', { value: res.maxHistoryPerEntry });
+    } catch (err) {
+      console.error('[settings] history limit error', err);
+      this.historySettingsMessage = this.t('settings.history.errorSaving');
+    }
+  }
+
+  async onCompactHistory(): Promise<void> {
+    if (this.historyBusy) return;
+    this.historyBusy = true;
+    this.historyCompactFailed = false;
+    this.historyCompactMessage = undefined;
+    try {
+      const res = await this.es.compactVault(false, this.historyLimit);
+      this.historyCompactMessage = this.t('settings.history.compactDone', { removed: res.removed });
+      this.historyCompactFailed = false;
+    } catch (err) {
+      console.error('[settings] compact history failed', err);
+      this.historyCompactMessage = this.t('settings.history.compactError');
+      this.historyCompactFailed = true;
+    } finally {
+      this.historyBusy = false;
+    }
+  }
+
+  async onKeepOnlyCurrentHistory(): Promise<void> {
+    if (this.historyKeepBusy) return;
+    this.historyKeepBusy = true;
+    this.historyKeepFailed = false;
+    this.historyKeepMessage = undefined;
+    try {
+      const res = await this.es.compactVault(true);
+      this.historyKeepMessage = this.t('settings.history.keepDone', { removed: res.removed });
+      this.historyKeepFailed = false;
+    } catch (err) {
+      console.error('[settings] keep only current history failed', err);
+      this.historyKeepMessage = this.t('settings.history.keepError');
+      this.historyKeepFailed = true;
+    } finally {
+      this.historyKeepBusy = false;
+    }
+  }
+
   get delayPreview(): number[] {
     const values: number[] = [];
     const total = Math.max(6, this.freeAttempts + 5);
@@ -170,11 +230,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.languageMessage = this.i18n.translate('settings.language.saved', { lang: label });
   }
 
-  async onExportVault(password: string): Promise<void> {
+  async onExportVault(password: string, includeHistory = true): Promise<void> {
     this.exportMessage = undefined;
     this.exporting = true;
     try {
-      const res = await this.es.exportVault('master', password);
+      const res = await this.es.exportVault('master', password, includeHistory);
       const payload = res.payload ?? { format: res.format, enc: res.enc, data: res.base64 };
       const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -214,7 +274,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
 
     this.exportModal.error = '';
-    await this.onExportVault(this.exportModal.password.trim());
+    await this.onExportVault(this.exportModal.password.trim(), this.exportIncludeHistory);
     this.closeExportModal();
   }
 
@@ -580,6 +640,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
       console.error('[settings] unable to load current vault ids', err);
       this.currentIds = new Set();
       this.currentEntries = [];
+    }
+  }
+
+  private async loadHistorySettings(): Promise<void> {
+    try {
+      const settings = await this.es.getHistorySettings();
+      this.historyLimit = settings.maxHistoryPerEntry;
+    } catch (err) {
+      console.error('[settings] load history settings failed', err);
     }
   }
 

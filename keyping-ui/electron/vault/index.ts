@@ -1,9 +1,10 @@
 // electron/vault/index.ts
 import { randomUUID, createHash, pbkdf2Sync, createCipheriv, createDecipheriv, randomBytes } from 'crypto';
-import { loadVault, saveVault } from './file';
+import { loadVault, saveVault, checkVaultIntegrity } from './file';
 import type { VaultEntry, VaultData } from './types';
 import { normalizePattern } from './similarity';
 import { encryptVault, decryptVault } from './crypto';
+import { loadSettings, saveSettings, DEFAULT_MAX_HISTORY } from './settings';
 
 function classMask(s: string): number {
   let m = 0;
@@ -12,6 +13,83 @@ function classMask(s: string): number {
   if (/\d/.test(s))   m |= 4;
   if (/[^A-Za-z0-9]/.test(s)) m |= 8;
   return m;
+}
+
+type Indexes = {
+  byId: Map<string, VaultEntry>;
+  childByPrev: Map<string, VaultEntry>;
+};
+
+function buildIndexes(entries: VaultEntry[]): Indexes {
+  const byId = new Map<string, VaultEntry>();
+  const childByPrev = new Map<string, VaultEntry>();
+  for (const e of entries) {
+    byId.set(e.id, e);
+    if (e.previousId && typeof e.previousId === 'string' && !childByPrev.has(e.previousId)) {
+      childByPrev.set(e.previousId, e);
+    }
+  }
+  return { byId, childByPrev };
+}
+
+function newestForChain(start: VaultEntry, idx: Indexes): VaultEntry {
+  let cur = start;
+  const seen = new Set<string>();
+  while (idx.childByPrev.has(cur.id) && !seen.has(cur.id)) {
+    seen.add(cur.id);
+    cur = idx.childByPrev.get(cur.id)!;
+  }
+  return cur;
+}
+
+function chainFromNewest(latest: VaultEntry, idx: Indexes): VaultEntry[] {
+  const chain: VaultEntry[] = [];
+  let cur: VaultEntry | undefined = latest;
+  const seen = new Set<string>();
+  while (cur && !seen.has(cur.id)) {
+    chain.push(cur);
+    seen.add(cur.id);
+    cur = cur.previousId ? idx.byId.get(cur.previousId) : undefined;
+  }
+  return chain;
+}
+
+function collectChains(entries: VaultEntry[]): VaultEntry[][] {
+  const idx = buildIndexes(entries);
+  const visited = new Set<string>();
+  const chains: VaultEntry[][] = [];
+
+  for (const entry of entries) {
+    if (visited.has(entry.id)) continue;
+    const latest = newestForChain(entry, idx);
+    const chain = chainFromNewest(latest, idx);
+    for (const e of chain) visited.add(e.id);
+    chains.push(chain);
+  }
+
+  return chains;
+}
+
+function enforceHistoryLimit(
+  vault: VaultData,
+  latestId: string,
+  maxHistoryPerEntry: number
+): { removed: string[] } {
+  const idx = buildIndexes(vault.entries);
+  const start = idx.byId.get(latestId);
+  if (!start) return { removed: [] };
+  const latest = newestForChain(start, idx);
+  const chain = chainFromNewest(latest, idx);
+  if (chain.length <= maxHistoryPerEntry) return { removed: [] };
+  const toRemove = chain.slice(maxHistoryPerEntry);
+  const ids = new Set(toRemove.map(e => e.id));
+  vault.entries = vault.entries.filter(e => !ids.has(e.id));
+  return { removed: Array.from(ids) };
+}
+
+async function historyLimit(): Promise<number> {
+  const settings = await loadSettings();
+  return settings.maxHistoryPerEntry ?? DEFAULT_MAX_HISTORY;
 }
 
 export async function addPasswordToVault(
@@ -96,6 +174,8 @@ export async function replacePasswordForEntry(
   };
 
   vault.entries.push(newEntry);
+  const maxHistory = await historyLimit();
+  enforceHistoryLimit(vault, newEntry.id, maxHistory);
   await saveVault(vault);
 
   return newEntry;
@@ -103,7 +183,7 @@ export async function replacePasswordForEntry(
 
 export async function getPasswordPlain(id: string): Promise<string | null> {
   const vault = await loadVault();
-  const entry = vault.entries.find(e => e.id === id && e.active !== false);
+  const entry = vault.entries.find(e => e.id === id);
   return entry?.secret ?? null;
 }
 
@@ -136,17 +216,147 @@ export async function updateEntryMeta(
 
 export type ImportEntry = Partial<VaultEntry> & { password?: string; secret?: string };
 
-export async function exportEncryptedVault(): Promise<Buffer> {
+export async function getPasswordHistory(id: string): Promise<VaultEntry[]> {
   const vault = await loadVault();
-  const json = JSON.stringify(vault);
+  const idx = buildIndexes(vault.entries);
+  const entry = idx.byId.get(id);
+  if (!entry) return [];
+  const latest = newestForChain(entry, idx);
+  return chainFromNewest(latest, idx);
+}
+
+export async function restorePasswordVersion(versionId: string): Promise<VaultEntry | null> {
+  const vault = await loadVault();
+  const idx = buildIndexes(vault.entries);
+  const version = idx.byId.get(versionId);
+  if (!version) return null;
+
+  const latest = newestForChain(version, idx);
+  const chain = chainFromNewest(latest, idx);
+  const current = chain.find(e => e.active !== false) || latest;
+
+  if (current.active !== false) {
+    current.active = false;
+  }
+
+  const secret = version.secret || version.password || '';
+  if (!secret || typeof secret !== 'string') return null;
+
+  const hash = createHash('sha256').update(secret).digest('hex');
+  const normalized = normalizePattern(secret);
+  const now = Date.now();
+
+  const restored: VaultEntry = {
+    ...version,
+    id: randomUUID(),
+    previousId: latest.id,
+    updatedAt: now,
+    createdAt: version.createdAt,
+    active: true,
+    hash,
+    normalized,
+    secret,
+    password: secret
+  };
+
+  vault.entries.push(restored);
+  const maxHistory = await historyLimit();
+  enforceHistoryLimit(vault, restored.id, maxHistory);
+  await saveVault(vault);
+  return restored;
+}
+
+export async function deleteHistoryVersion(id: string): Promise<boolean> {
+  const vault = await loadVault();
+  const entry = vault.entries.find(e => e.id === id);
+  if (!entry) return false;
+  if (entry.active !== false) {
+    throw new Error('Cannot delete active version');
+  }
+  vault.entries = vault.entries.filter(e => e.id !== id);
+  await saveVault(vault);
+  return true;
+}
+
+export async function deleteHistoryForEntry(id: string): Promise<number> {
+  const vault = await loadVault();
+  const idx = buildIndexes(vault.entries);
+  const entry = idx.byId.get(id);
+  if (!entry) return 0;
+  const latest = newestForChain(entry, idx);
+  const chain = chainFromNewest(latest, idx);
+  const keeper = chain.find(e => e.active !== false) || chain[0];
+  const keepId = keeper.id;
+  keeper.active = true;
+  const removedIds = new Set(chain.map(e => e.id).filter(x => x !== keepId));
+  vault.entries = vault.entries.filter(e => !removedIds.has(e.id));
+  await saveVault(vault);
+  return removedIds.size;
+}
+
+export async function compactVault(opts?: { keepOnlyCurrent?: boolean; maxHistoryPerEntry?: number }): Promise<{ removed: number; kept: number; chains: number }> {
+  const vault = await loadVault();
+  const chains = collectChains(vault.entries);
+  const removedIds = new Set<string>();
+  const limit = Math.max(1, opts?.maxHistoryPerEntry ?? (await historyLimit()));
+
+  for (const chain of chains) {
+    const current = chain.find(e => e.active !== false) || chain[0];
+    if (opts?.keepOnlyCurrent) {
+      for (const e of chain) {
+        if (e.id !== current.id) removedIds.add(e.id);
+      }
+      current.active = true;
+      continue;
+    }
+
+    if (chain.length > limit) {
+      for (const e of chain.slice(limit)) {
+        removedIds.add(e.id);
+      }
+    }
+  }
+
+  if (removedIds.size > 0) {
+    vault.entries = vault.entries.filter(e => !removedIds.has(e.id));
+    await saveVault(vault);
+  }
+
+  return { removed: removedIds.size, kept: vault.entries.length, chains: chains.length };
+}
+
+export async function getHistorySettings(): Promise<{ maxHistoryPerEntry: number }> {
+  return await loadSettings();
+}
+
+export async function updateHistorySettings(maxHistoryPerEntry: number): Promise<{ maxHistoryPerEntry: number }> {
+  return await saveSettings({ maxHistoryPerEntry });
+}
+
+async function dataForExport(includeHistory: boolean): Promise<VaultData> {
+  const vault = await loadVault();
+  if (includeHistory) return vault;
+
+  const chains = collectChains(vault.entries);
+  const trimmed: VaultEntry[] = [];
+  for (const chain of chains) {
+    const current = chain.find(e => e.active !== false) || chain[0];
+    trimmed.push(current);
+  }
+  return { entries: trimmed };
+}
+
+export async function exportEncryptedVault(includeHistory = true): Promise<Buffer> {
+  const data = await dataForExport(includeHistory);
+  const json = JSON.stringify(data);
   return encryptVault(json);
 }
 
-export async function exportVaultWithPassword(password: string): Promise<{ format: string; enc: 'master'; iterations: number; salt: string; data: string }> {
-  const vault = await loadVault();
-  const json = JSON.stringify(vault);
-  const { salt, iterations, data } = encryptWithPassword(json, password);
-  return { format: 'keyping-export-v2', enc: 'master', iterations, salt, data };
+export async function exportVaultWithPassword(password: string, includeHistory = true): Promise<{ format: string; enc: 'master'; iterations: number; salt: string; data: string }> {
+  const data = await dataForExport(includeHistory);
+  const json = JSON.stringify(data);
+  const { salt, iterations, data: encData } = encryptWithPassword(json, password);
+  return { format: 'keyping-export-v2', enc: 'master', iterations, salt, data: encData };
 }
 
 export async function parseImportPayload(raw: string, password?: string): Promise<{ entries: ImportEntry[]; source: 'encrypted' | 'plain' | 'master'; requiresPassword?: boolean; masterPayload?: any }> {
@@ -272,5 +482,13 @@ function decryptWithPassword(payload: { salt: string; iterations: number; data: 
   const dec = Buffer.concat([decipher.update(cipher), decipher.final()]).toString('utf8');
   return dec;
 }
+
+export { checkVaultIntegrity };
+export type {
+  VaultIntegrityReport,
+  VaultIntegrityIssue,
+  VaultIntegrityIssueCode,
+  VaultIntegrityStatus
+} from './types';
 
 

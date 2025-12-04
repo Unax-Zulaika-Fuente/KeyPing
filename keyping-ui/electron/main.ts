@@ -17,6 +17,14 @@ import {
   mergeVaultEntries,
   importVaultFromEncrypted,
   importVaultFromMasterEncrypted,
+  checkVaultIntegrity,
+  getPasswordHistory,
+  restorePasswordVersion,
+  deleteHistoryVersion,
+  deleteHistoryForEntry,
+  compactVault,
+  getHistorySettings,
+  updateHistorySettings,
 } from './vault';
 
 import { findMostSimilarInVault } from './vault/similarity';
@@ -242,6 +250,25 @@ ipcMain.handle('keyping:ping', async () => {
   return `pong ${process.versions.electron}`;
 });
 
+ipcMain.handle('keyping:vaultIntegrity', async () => {
+  return await checkVaultIntegrity();
+});
+
+ipcMain.handle('keyping:getHistorySettings', async () => {
+  return await getHistorySettings();
+});
+
+ipcMain.handle('keyping:updateHistorySettings', async (_evt, maxHistoryPerEntry: number) => {
+  return await updateHistorySettings(maxHistoryPerEntry);
+});
+
+ipcMain.handle('keyping:compactVault', async (_evt, args?: { keepOnlyCurrent?: boolean; maxHistoryPerEntry?: number }) => {
+  return await compactVault({
+    keepOnlyCurrent: !!args?.keepOnlyCurrent,
+    maxHistoryPerEntry: args?.maxHistoryPerEntry
+  });
+});
+
 // checker principal (nota: ahora es async)
 ipcMain.handle('keyping:check', async (_evt, args: { pwd: string }) => {
   console.log('[main] keyping:check called with:', JSON.stringify(args?.pwd));
@@ -359,6 +386,30 @@ ipcMain.handle('keyping:updateMeta', async (_evt, args: {
   return { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, folder, twoFactorEnabled };
 });
 
+const mapHistoryEntry = (e: any) => {
+  const { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, folder, twoFactorEnabled, active, previousId } = e;
+  return { id, createdAt, updatedAt, length, classMask, label, loginUrl, passwordChangeUrl, username, email, folder, twoFactorEnabled, active, previousId };
+};
+
+ipcMain.handle('keyping:getPasswordHistory', async (_evt, args: { id: string }) => {
+  const history = await getPasswordHistory(args.id);
+  return history.map(mapHistoryEntry);
+});
+
+ipcMain.handle('keyping:restorePasswordVersion', async (_evt, args: { id: string }) => {
+  const restored = await restorePasswordVersion(args.id);
+  if (!restored) throw new Error('Version not found');
+  return mapHistoryEntry(restored);
+});
+
+ipcMain.handle('keyping:deletePasswordVersion', async (_evt, args: { id: string }) => {
+  return await deleteHistoryVersion(args.id);
+});
+
+ipcMain.handle('keyping:clearPasswordHistory', async (_evt, args: { id: string }) => {
+  return await deleteHistoryForEntry(args.id);
+});
+
 ipcMain.handle('keyping:getPassword', async (_evt, args: { id: string }) => {
   return await getPasswordPlain(args.id); // devuelve string | null
 });
@@ -386,11 +437,12 @@ ipcMain.handle('keyping:openExternal', async (_evt, rawUrl: string) => {
   return false;
 });
 
-ipcMain.handle('keyping:exportVault', async (_evt, args?: { mode?: 'native' | 'master'; password?: string }) => {
+ipcMain.handle('keyping:exportVault', async (_evt, args?: { mode?: 'native' | 'master'; password?: string; includeHistory?: boolean }) => {
   const mode = args?.mode || 'master';
+  const includeHistory = args?.includeHistory !== false;
 
   if (mode === 'native') {
-    const buf = await exportEncryptedVault();
+    const buf = await exportEncryptedVault(includeHistory);
     const filename = `keyping-vault-${new Date().toISOString().replace(/[:.]/g, '-')}.keyping`;
     return { base64: buf.toString('base64'), filename, format: 'keyping-export-v1', enc: 'native' };
   }
@@ -399,7 +451,7 @@ ipcMain.handle('keyping:exportVault', async (_evt, args?: { mode?: 'native' | 'm
     throw new Error('Password required for export');
   }
 
-  const payload = await exportVaultWithPassword(args.password);
+  const payload = await exportVaultWithPassword(args.password, includeHistory);
   const filename = `keyping-vault-${new Date().toISOString().replace(/[:.]/g, '-')}.kpenc`;
   return { payload, filename, format: payload.format, enc: payload.enc };
 });

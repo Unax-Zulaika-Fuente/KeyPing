@@ -206,6 +206,24 @@
   flex-wrap: wrap;
 }
 
+.export-extra {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.history-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.history-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .btn {
   border-radius: 12px;
   border: 1px solid transparent;

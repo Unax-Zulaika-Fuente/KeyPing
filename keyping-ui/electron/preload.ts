@@ -4,6 +4,20 @@ console.log('[preload] loaded');
 
 contextBridge.exposeInMainWorld('keyping', {
   ping: () => ipcRenderer.invoke('keyping:ping'),
+  checkVaultIntegrity: () => ipcRenderer.invoke('keyping:vaultIntegrity'),
+  getHistorySettings: () => ipcRenderer.invoke('keyping:getHistorySettings'),
+  updateHistorySettings: (maxHistoryPerEntry: number) =>
+    ipcRenderer.invoke('keyping:updateHistorySettings', maxHistoryPerEntry),
+  compactVault: (keepOnlyCurrent?: boolean, maxHistoryPerEntry?: number) =>
+    ipcRenderer.invoke('keyping:compactVault', { keepOnlyCurrent, maxHistoryPerEntry }),
+  getPasswordHistory: (id: string) =>
+    ipcRenderer.invoke('keyping:getPasswordHistory', { id }),
+  restorePasswordVersion: (id: string) =>
+    ipcRenderer.invoke('keyping:restorePasswordVersion', { id }),
+  deletePasswordVersion: (id: string) =>
+    ipcRenderer.invoke('keyping:deletePasswordVersion', { id }),
+  clearPasswordHistory: (id: string) =>
+    ipcRenderer.invoke('keyping:clearPasswordHistory', { id }),
 
   checkCandidate: (pwd: string) => {
     console.log('[preload] invoking keyping:check');
@@ -34,8 +48,8 @@ contextBridge.exposeInMainWorld('keyping', {
   openExternal: (url: string) =>
     ipcRenderer.invoke('keyping:openExternal', url),
 
-  exportVault: (mode?: 'native' | 'master', password?: string) =>
-    ipcRenderer.invoke('keyping:exportVault', { mode, password }),
+  exportVault: (mode?: 'native' | 'master', password?: string, includeHistory?: boolean) =>
+    ipcRenderer.invoke('keyping:exportVault', { mode, password, includeHistory }),
 
   parseImport: (raw: string, password?: string) =>
     ipcRenderer.invoke('keyping:parseImport', raw, password),

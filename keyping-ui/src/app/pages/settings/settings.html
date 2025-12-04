@@ -201,20 +201,62 @@
       </div>
 
       <div class="setting-block">
-        <div class="block-head">
-          <div class="block-title">{{ 'settings.export.title' | t }}</div>
-          <p class="muted tiny">{{ 'settings.export.subtitle' | t }}</p>
-        </div>
-        <div class="block-actions">
-          <span class="muted tiny">{{ 'settings.export.hint' | t }}</span>
-          <button type="button" class="btn primary" (click)="openExportModal()" [disabled]="exporting">{{ 'settings.export.action' | t }}</button>
-        </div>
-        <div class="inline-alert success" *ngIf="exportMessage">
-          {{ exportMessage }}
-        </div>
+      <div class="block-head">
+        <div class="block-title">{{ 'settings.export.title' | t }}</div>
+        <p class="muted tiny">{{ 'settings.export.subtitle' | t }}</p>
       </div>
+      <div class="block-actions">
+        <span class="muted tiny">{{ 'settings.export.hint' | t }}</span>
+        <button type="button" class="btn primary" (click)="openExportModal()" [disabled]="exporting">{{ 'settings.export.action' | t }}</button>
+      </div>
+      <div class="export-extra">
+        <label class="checkbox">
+          <input type="checkbox" [(ngModel)]="exportIncludeHistory" />
+          <span>{{ 'settings.export.includeHistory' | t }}</span>
+        </label>
+        <p class="muted tiny">{{ 'settings.export.includeHistoryHint' | t }}</p>
+      </div>
+      <div class="inline-alert success" *ngIf="exportMessage">
+        {{ exportMessage }}
+      </div>
+    </div>
 
-      <div class="divider"></div>
+    <div class="divider"></div>
+    <div class="setting-block">
+      <div class="block-head">
+        <div class="block-title">{{ 'settings.history.title' | t }}</div>
+        <p class="muted tiny">{{ 'settings.history.subtitle' | t }}</p>
+      </div>
+      <div class="history-grid">
+        <label class="field">
+          <span class="label">{{ 'settings.history.limitLabel' | t }}</span>
+          <input type="number" min="1" max="200" [(ngModel)]="historyLimit" (input)="historySettingsMessage = undefined" />
+        </label>
+      </div>
+      <div class="block-actions">
+        <span class="muted tiny">{{ 'settings.history.limitHint' | t }}</span>
+        <button type="button" class="btn ghost" (click)="onSaveHistoryLimit()">{{ 'settings.history.saveLimit' | t }}</button>
+      </div>
+      <div class="inline-alert success" *ngIf="historySettingsMessage">
+        {{ historySettingsMessage }}
+      </div>
+      <div class="history-actions">
+        <button type="button" class="btn ghost" (click)="onCompactHistory()" [disabled]="historyBusy">
+          {{ 'settings.history.compact' | t }}
+        </button>
+        <button type="button" class="btn ghost danger" (click)="onKeepOnlyCurrentHistory()" [disabled]="historyKeepBusy">
+          {{ 'settings.history.keepOnlyCurrent' | t }}
+        </button>
+      </div>
+      <div class="inline-alert" *ngIf="historyCompactMessage" [ngClass]="historyCompactFailed ? 'error' : 'success'">
+        {{ historyCompactMessage }}
+      </div>
+      <div class="inline-alert" *ngIf="historyKeepMessage" [ngClass]="historyKeepFailed ? 'error' : 'success'">
+        {{ historyKeepMessage }}
+      </div>
+    </div>
+
+    <div class="divider"></div>
 
       <div class="setting-block">
         <div class="block-head">
