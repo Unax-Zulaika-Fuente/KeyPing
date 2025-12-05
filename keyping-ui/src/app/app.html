@@ -1,4 +1,5 @@
 <kp-header [locked]="lockState !== 'unlocked'"></kp-header>
+
 <main class="container">
   <router-outlet />
 </main>
@@ -12,7 +13,7 @@
     </p>
 
     <form (ngSubmit)="lockState === 'unset' ? onCreateMaster() : onUnlock()" class="lock-form">
-      <label>
+      <label class="password-field">
         <span>
           {{
             lockState === 'unset'
@@ -20,13 +21,31 @@
               : ('app.lock.enterLabel' | t)
           }}
         </span>
-        <input
-          type="password"
-          [(ngModel)]="masterPassword"
-          name="masterPassword"
-          autocomplete="current-password"
-          required
-        />
+        <div class="input-with-arrow">
+          <input
+            type="password"
+            [(ngModel)]="masterPassword"
+            name="masterPassword"
+            autocomplete="current-password"
+            required
+          />
+          <button
+            type="submit"
+            aria-label="{{ lockState === 'unset' ? ('app.lock.btnCreate' | t) : ('app.lock.btnUnlock' | t) }}"
+            class="arrow-btn"
+          >
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path
+                d="M5 12h14m-5-5l5 5-5 5"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                fill="none"
+              />
+            </svg>
+          </button>
+        </div>
       </label>
 
       <label *ngIf="lockState === 'unset'">
@@ -44,18 +63,11 @@
         <div class="lock-feedback" *ngIf="masterError">
           <div class="chip danger">
             <span *ngIf="masterCooldownLabel; else plainError">
-              {{ render(masterError) }} · {{ render(masterCooldownLabel) }}
+              {{ render(masterError) }} Жњ {{ render(masterCooldownLabel) }}
             </span>
             <ng-template #plainError>{{ render(masterError) }}</ng-template>
           </div>
         </div>
-        <button type="submit" class="btn primary">
-          {{
-            lockState === 'unset'
-              ? ('app.lock.btnCreate' | t)
-              : ('app.lock.btnUnlock' | t)
-          }}
-        </button>
       </div>
     </form>
   </div>

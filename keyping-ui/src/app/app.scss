@@ -60,6 +60,65 @@
     margin-top: 10px;
   }
 
+  .password-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .input-with-arrow {
+    position: relative;
+    border-radius: 10px;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    background: #0f172a;
+  }
+
+  .input-with-arrow input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: #e5e7eb;
+    padding: 12px 42px 12px 14px;
+    font-size: 1rem;
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  .input-with-arrow:focus-within {
+    border-color: rgba(59, 130, 246, 0.7);
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+  }
+
+  .arrow-btn {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: #cbd5e1;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .arrow-btn:hover,
+  .arrow-btn:focus {
+    color: #fff;
+  }
+
+  .arrow-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
   label {
     display: flex;
     flex-direction: column;
@@ -68,7 +127,7 @@
     color: #cbd5e1;
   }
 
-  input {
+  label input {
     background: #0f172a;
     border: 1px solid #334155;
     border-radius: 10px;
