@@ -1,5 +1,5 @@
 // main.ts
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron';
 import * as path from 'path';
 import * as url from 'url';
 import { RAW_COMMON_WORDS } from './common-words';
@@ -67,6 +67,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Remove default menu to hide devtools entrypoints
+  Menu.setApplicationMenu(null);
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
