@@ -2,6 +2,7 @@
 :root {
   --bg:#0f1115; --card:#161a22; --text:#e6e9ef; --muted:#9aa3b2;
   --accent:#4aa3ff; --warn:#ffcc66; --danger:#ff6b6b; --ok:#6bff9d; --border:#2a2f3a; --btn:#1a1f2a;
+  --kp-titlebar-height: env(titlebar-area-height, 32px);
 }
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}

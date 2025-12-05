@@ -1,3 +1,5 @@
+<div class="kp-titlebar"></div>
+
 <kp-header [locked]="lockState !== 'unlocked'"></kp-header>
 
 <main class="container">
@@ -5,87 +7,102 @@
 </main>
 
 <div class="lock-screen" *ngIf="lockState !== 'unlocked'">
-  <div class="lock-card">
-    <h2 *ngIf="lockState === 'locked'">{{ 'app.lock.titleLocked' | t }}</h2>
-    <h2 *ngIf="lockState === 'unset'">{{ 'app.lock.titleUnset' | t }}</h2>
-    <p class="muted small">
-      {{ 'app.lock.subtitle' | t }}
-    </p>
+  <div class="lock-card" [class.first-time]="lockState === 'unset'">
+    <ng-container [ngSwitch]="lockState">
+      <ng-container *ngSwitchCase="'locked'">
+        <h2>{{ 'app.lock.titleLocked' | t }}</h2>
+        <p class="muted small">{{ 'app.lock.subtitle' | t }}</p>
 
-    <form (ngSubmit)="lockState === 'unset' ? onCreateMaster() : onUnlock()" class="lock-form">
-      <ng-container [ngSwitch]="lockState">
-        <label *ngSwitchCase="'locked'" class="password-field">
-          <span>{{ 'app.lock.enterLabel' | t }}</span>
-          <div class="input-with-arrow">
-            <input
-              type="password"
-              [(ngModel)]="masterPassword"
-              name="masterPassword"
-              autocomplete="current-password"
-              required
-            />
-            <button
-              type="submit"
-              aria-label="{{ 'app.lock.btnUnlock' | t }}"
-              class="arrow-btn"
-            >
-              <svg viewBox="0 0 24 24" focusable="false">
-                <path
-                  d="M5 12h14m-5-5l5 5-5 5"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  fill="none"
-                />
-              </svg>
-            </button>
+        <form (ngSubmit)="onUnlock()" class="lock-form locked-form">
+          <label class="password-field">
+            <span>{{ 'app.lock.enterLabel' | t }}</span>
+            <div class="input-with-arrow">
+              <input
+                type="password"
+                [(ngModel)]="masterPassword"
+                name="masterPassword"
+                autocomplete="current-password"
+                required
+              />
+              <button
+                type="submit"
+                aria-label="{{ 'app.lock.btnUnlock' | t }}"
+                class="arrow-btn"
+              >
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path
+                    d="M5 12h14m-5-5l5 5-5 5"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    fill="none"
+                  />
+                </svg>
+              </button>
+            </div>
+          </label>
+
+          <div class="lock-actions">
+            <div class="lock-feedback" *ngIf="masterError">
+              <div class="chip danger">
+                <span *ngIf="masterCooldownLabel; else plainErrorLocked">
+                  {{ render(masterError) }} - {{ render(masterCooldownLabel) }}
+                </span>
+                <ng-template #plainErrorLocked>{{ render(masterError) }}</ng-template>
+              </div>
+            </div>
           </div>
-        </label>
-
-        <div *ngSwitchCase="'unset'" class="new-master-fields">
-          <label class="password-field">
-            <span>{{ 'app.lock.masterLabel' | t }}</span>
-            <input
-              type="password"
-              [(ngModel)]="masterPassword"
-              name="masterPassword"
-              autocomplete="new-password"
-              required
-            />
-          </label>
-
-          <label class="password-field">
-            <span>{{ 'app.lock.confirmLabel' | t }}</span>
-            <input
-              type="password"
-              [(ngModel)]="masterPasswordConfirm"
-              name="masterPasswordConfirm"
-              autocomplete="new-password"
-              required
-            />
-          </label>
-        </div>
+        </form>
       </ng-container>
 
-      <div class="lock-actions" [class.actions-stacked]="lockState === 'unset'">
-        <div class="lock-feedback" *ngIf="masterError">
-          <div class="chip danger">
-            <span *ngIf="masterCooldownLabel; else plainError">
-              {{ render(masterError) }} - {{ render(masterCooldownLabel) }}
-            </span>
-            <ng-template #plainError>{{ render(masterError) }}</ng-template>
-          </div>
+      <ng-container *ngSwitchCase="'unset'">
+        <div class="first-time-heading">
+          <p class="muted tiny-eyebrow">{{ 'app.lock.subtitle' | t }}</p>
+          <h2>{{ 'app.lock.titleUnset' | t }}</h2>
         </div>
 
-        <button
-          *ngIf="lockState === 'unset'"
-          type="submit"
-          class="btn primary full-width"
-        >
-          {{ 'app.lock.btnCreate' | t }}
-        </button>
-      </div>
-    </form>
+        <form (ngSubmit)="onCreateMaster()" class="lock-form first-time-form">
+          <div class="new-master-fields first-time-fields">
+            <label class="password-field">
+              <span>{{ 'app.lock.masterLabel' | t }}</span>
+              <input
+                type="password"
+                [(ngModel)]="masterPassword"
+                name="masterPassword"
+                autocomplete="new-password"
+                required
+              />
+            </label>
+
+            <label class="password-field">
+              <span>{{ 'app.lock.confirmLabel' | t }}</span>
+              <input
+                type="password"
+                [(ngModel)]="masterPasswordConfirm"
+                name="masterPasswordConfirm"
+                autocomplete="new-password"
+                required
+              />
+            </label>
+          </div>
+
+          <div class="lock-actions actions-stacked">
+            <div class="lock-feedback" *ngIf="masterError">
+              <div class="chip danger">
+                <ng-container *ngIf="masterCooldownLabel; else plainErrorUnset">
+                  {{ render(masterError) }} - {{ render(masterCooldownLabel) }}
+                </ng-container>
+                <ng-template #plainErrorUnset>{{ render(masterError) }}</ng-template>
+              </div>
+            </div>
+
+            <button type="submit" class="btn primary full-width">
+              {{ 'app.lock.btnCreate' | t }}
+            </button>
+          </div>
+        </form>
+      </ng-container>
+    </ng-container>
   </div>
 </div>

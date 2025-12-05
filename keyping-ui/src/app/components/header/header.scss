@@ -1,6 +1,7 @@
 .layout-shell {
   display: flex;
   height: 100vh;
+  padding-top: var(--kp-titlebar-height);
   overflow: hidden;
   background: #020617;
   color: #e5e7eb;

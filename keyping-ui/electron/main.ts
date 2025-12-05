@@ -1,5 +1,5 @@
 // main.ts
-import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron';
+import { app, BrowserWindow, BrowserWindowConstructorOptions, ipcMain, Menu, shell } from 'electron';
 import * as path from 'path';
 import * as url from 'url';
 import { RAW_COMMON_WORDS } from './common-words';
@@ -32,19 +32,37 @@ import { clipboard } from 'electron';
 
 
 let win: BrowserWindow | null = null;
+const isWindows = process.platform === 'win32';
+const isMac = process.platform === 'darwin';
 
 function createWindow() {
-  win = new BrowserWindow({
+  const windowOptions: BrowserWindowConstructorOptions = {
     width: 1100,
     height: 720,
     show: false,
+    backgroundColor: '#0f172a',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
     }
-  });
+  };
+
+  if (isWindows || isMac) {
+    windowOptions.titleBarStyle = 'hidden';
+    windowOptions.titleBarOverlay = {
+      color: '#0b1220',
+      symbolColor: '#e5e7eb',
+      height: 32
+    };
+  }
+
+  if (isMac) {
+    windowOptions.trafficLightPosition = { x: 18, y: 18 };
+  }
+
+  win = new BrowserWindow(windowOptions);
 
   // basic hardening
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
