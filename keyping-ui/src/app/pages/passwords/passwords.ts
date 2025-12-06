@@ -18,6 +18,8 @@ import { MasterLockService } from '../../core/master-lock.service';
 import { TranslatePipe } from '../../core/translate.pipe';
 import { I18nService } from '../../core/i18n.service';
 
+type StrengthFilter = 'all' | 'strong' | 'medium' | 'weak';
+
 @Component({
   selector: 'app-passwords',
   standalone: true,
@@ -51,6 +53,14 @@ export class PasswordsComponent implements OnInit {
 
   // Termino de busqueda
   searchTerm = '';
+  strengthFilter: StrengthFilter = 'all';
+  onlyNoTwoFactor = false;
+  onlyDuplicates = false;
+  dateFilterMode: 'any' | 'created' | 'updated' = 'any';
+  dateFrom = '';
+  dateTo = '';
+  duplicateIds = new Set<string>();
+  filtersCollapsed = true;
   folderMenu: { visible: boolean; x: number; y: number; folder: string } = {
     visible: false,
     x: 0,
@@ -127,6 +137,7 @@ export class PasswordsComponent implements OnInit {
         this.selected = this.entries.find(e => e.id === previouslySelectedId) || null;
       }
       this.master.persistVault(this.entries);
+      await this.refreshDuplicateIndex();
       if (this.selected) {
         await this.loadHistory(this.selected.id);
       } else {
@@ -151,22 +162,81 @@ export class PasswordsComponent implements OnInit {
     }
   }
 
-  // Lista filtrada en base al searchTerm
+  private async refreshDuplicateIndex(): Promise<void> {
+    this.duplicateIds = new Set<string>();
+    if (!this.entries.length) return;
+
+    const map = new Map<string, string[]>();
+
+    for (const entry of this.entries) {
+      try {
+        const plain = await this.es.getPassword(entry.id);
+        if (!plain) continue;
+        if (!map.has(plain)) {
+          map.set(plain, []);
+        }
+        map.get(plain)!.push(entry.id);
+      } catch (err) {
+        console.error('[renderer] duplicate scan failed', err);
+      }
+    }
+
+    const dupes = new Set<string>();
+    for (const ids of map.values()) {
+      if (ids.length > 1) {
+        ids.forEach(id => dupes.add(id));
+      }
+    }
+
+    this.duplicateIds = dupes;
+  }
+
+  get hasActiveFilters(): boolean {
+    return (
+      this.strengthFilter !== 'all' ||
+      this.onlyNoTwoFactor ||
+      this.onlyDuplicates ||
+      this.dateFilterMode !== 'any' ||
+      !!this.dateFrom ||
+      !!this.dateTo
+    );
+  }
+
+  // Lista filtrada en base al searchTerm y filtros avanzados
   get filteredEntries(): PasswordMeta[] {
     const term = this.searchTerm.trim().toLowerCase();
-    if (!term) return [...this.entries];
+    const fromTs = this.parseDateInput(this.dateFrom);
+    const toTs = this.parseDateInput(this.dateTo, true);
 
     return this.entries.filter(e => {
-      const fields: (string | undefined)[] = [
-        e.label,
-        (e as any).username,
-        (e as any).email,
-        e.loginUrl,
-        e.passwordChangeUrl
-      ];
-
-      return fields.some(f => f && f.toLowerCase().includes(term));
+      if (term && !this.matchesSearch(e, term)) return false;
+      if (this.strengthFilter !== 'all' && this.strengthLabel(e) !== this.strengthFilter) return false;
+      if (this.onlyNoTwoFactor && e.twoFactorEnabled) return false;
+      if (this.onlyDuplicates && !this.duplicateIds.has(e.id)) return false;
+      if (!this.matchesDateRange(e, fromTs, toTs)) return false;
+      return true;
     });
+  }
+
+  resetFilters(): void {
+    this.strengthFilter = 'all';
+    this.onlyNoTwoFactor = false;
+    this.onlyDuplicates = false;
+    this.dateFilterMode = 'any';
+    this.clearDateFilter();
+  }
+
+  setStrengthFilter(level: StrengthFilter): void {
+    this.strengthFilter = this.strengthFilter === level ? 'all' : level;
+  }
+
+  clearDateFilter(): void {
+    this.dateFrom = '';
+    this.dateTo = '';
+  }
+
+  toggleFilters(): void {
+    this.filtersCollapsed = !this.filtersCollapsed;
   }
 
   // Lista filtrada + ordenada segun preferencia del usuario
@@ -211,6 +281,49 @@ export class PasswordsComponent implements OnInit {
 
   fmtDate(ts: number): string {
     return new Date(ts).toLocaleString();
+  }
+
+  private matchesSearch(entry: PasswordMeta, term: string): boolean {
+    const folderRaw = (entry.folder || '').toLowerCase();
+    const folderName = this.folderDisplayName(entry.folder || '').toLowerCase();
+
+    const fields: (string | undefined)[] = [
+      entry.label,
+      (entry as any).username,
+      (entry as any).email,
+      entry.loginUrl,
+      entry.passwordChangeUrl,
+      folderRaw,
+      folderName
+    ];
+
+    return fields.some(f => f && f.toLowerCase().includes(term));
+  }
+
+  private parseDateInput(value: string, endOfDay = false): number | null {
+    if (!value) return null;
+    const ts = Date.parse(value);
+    if (Number.isNaN(ts)) return null;
+    return endOfDay ? ts + 24 * 60 * 60 * 1000 - 1 : ts;
+  }
+
+  private matchesDateRange(entry: PasswordMeta, from?: number | null, to?: number | null): boolean {
+    const hasFrom = typeof from === 'number';
+    const hasTo = typeof to === 'number';
+    if (!hasFrom && !hasTo) return true;
+
+    const created = entry.createdAt;
+    const updated = entry.updatedAt || entry.createdAt;
+    const target =
+      this.dateFilterMode === 'created'
+        ? created
+        : this.dateFilterMode === 'updated'
+          ? updated
+          : Math.max(created, updated);
+
+    if (hasFrom && target < (from as number)) return false;
+    if (hasTo && target > (to as number)) return false;
+    return true;
   }
 
   getDateLabel(entry: PasswordMeta): string {
