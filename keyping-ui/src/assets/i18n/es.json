@@ -418,5 +418,12 @@
   "dashboard.activity.empty": "Sin actividad registrada",
   "dashboard.activity.col.label": "Nombre",
   "dashboard.activity.col.status": "Estado",
-  "dashboard.activity.col.time": "Fecha y hora"
+  "dashboard.activity.col.time": "Fecha y hora",
+  "dashboard.about.title": "Acerca de",
+  "dashboard.about.subtitle": "Versión y enlaces útiles",
+  "dashboard.about.version": "Versión",
+  "dashboard.about.license": "Licencia MIT",
+  "dashboard.about.repo": "Repositorio",
+  "dashboard.about.licenseLink": "Licencia",
+  "dashboard.about.site": "Sitio web"
 }

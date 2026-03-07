@@ -64,8 +64,13 @@ function createWindow() {
 
   win = new BrowserWindow(windowOptions);
 
-  // basic hardening
-  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  // basic hardening + open external links in default browser
+  win.webContents.setWindowOpenHandler(({ url: targetUrl }) => {
+    if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+      shell.openExternal(targetUrl);
+    }
+    return { action: 'deny' };
+  });
   win.webContents.on('will-navigate', (e, targetUrl) => {
     if (!targetUrl.startsWith('file://')) {
       e.preventDefault();

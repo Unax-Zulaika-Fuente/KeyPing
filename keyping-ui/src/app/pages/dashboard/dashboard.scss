@@ -212,6 +212,49 @@
   font-size: 13px;
 }
 
+.about-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.about-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.about-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.about-logo img {
+  width: 54px;
+  height: 54px;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.about-links {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.about-links a {
+  color: #bfdbfe;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.about-links a:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 640px) {
   .card-actions {
     flex-direction: column;

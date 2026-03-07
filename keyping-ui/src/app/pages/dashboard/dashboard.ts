@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../core/translate.pipe';
 import { ElectronService, PasswordMeta } from '../../core/electron.service';
 import { I18nService } from '../../core/i18n.service';
+import pkg from '../../../../package.json';
 
 type ActivityItem = { label: string; status: string; time: string };
 
@@ -29,6 +30,7 @@ export class DashboardComponent implements OnInit {
   score = 0;
   scoreLabel = '';
   activity: ActivityItem[] = [];
+  version = pkg.version ?? '—';
 
   constructor(private es: ElectronService, private router: Router, private i18nSvc: I18nService) {}
 
