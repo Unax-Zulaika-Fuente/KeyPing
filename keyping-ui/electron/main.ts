@@ -413,22 +413,6 @@ ipcMain.handle('keyping:list', async () => {
     });
 });
 
-ipcMain.handle('keyping:open-external', async (_evt, rawUrl: string) => {
-  try {
-    const u = new URL(rawUrl);
-
-    // Solo permitimos http/https por seguridad
-    if (u.protocol === 'http:' || u.protocol === 'https:') {
-      await shell.openExternal(u.toString());
-      return true;
-    }
-  } catch (err) {
-    console.error('[main] invalid external url', rawUrl, err);
-  }
-
-  return false;
-});
-
 // Copiar password al portapapeles durante 20s
 ipcMain.handle('keyping:copy', async (_evt, args: { id: string }) => {
   const secret = await getPasswordPlain(args.id);

@@ -180,6 +180,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.navSub?.unsubscribe();
+    clearInterval(this.cooldownTimer);
     this.updates.destroy();
   }
 

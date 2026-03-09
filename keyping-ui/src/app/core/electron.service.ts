@@ -177,9 +177,9 @@ export class ElectronService {
     return this.api.listPasswords();
   }
 
-  async copyPassword(id: string): Promise<void> {
+  async copyPassword(id: string): Promise<boolean> {
     if (!this.api) throw new Error('No preload API available');
-    await this.api.copyPassword(id);
+    return this.api.copyPassword(id);
   }
 
   async deletePassword(id: string): Promise<void> {

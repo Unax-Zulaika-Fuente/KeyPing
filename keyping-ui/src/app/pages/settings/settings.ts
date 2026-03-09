@@ -123,6 +123,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.langSub?.unsubscribe();
     this.updateStateSub?.unsubscribe();
     this.updatePreferencesSub?.unsubscribe();
+    clearInterval(this.countdownTimer);
   }
 
   async onUpdateMaster(): Promise<void> {

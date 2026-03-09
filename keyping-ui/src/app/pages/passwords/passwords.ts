@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, HostListener, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import {
   NgFor,
   NgIf,
@@ -40,7 +40,7 @@ type StrengthFilter = 'all' | 'strong' | 'medium' | 'weak';
   templateUrl: './passwords.html',
   styleUrls: ['./passwords.scss']
 })
-export class PasswordsComponent implements OnInit {
+export class PasswordsComponent implements OnInit, OnDestroy {
   loading = true;
   entries: PasswordMeta[] = [];
   listCollapsed = false;
@@ -164,6 +164,11 @@ export class PasswordsComponent implements OnInit {
     }
   }
 
+  ngOnDestroy(): void {
+    clearInterval(this.copyTimer);
+    this.clearGhost();
+  }
+
   private async loadHistory(entryId: string): Promise<void> {
     this.historyLoading = true;
     this.historyError = undefined;
@@ -184,17 +189,24 @@ export class PasswordsComponent implements OnInit {
 
     const map = new Map<string, string[]>();
 
-    for (const entry of this.entries) {
-      try {
-        const plain = await this.es.getPassword(entry.id);
-        if (!plain) continue;
-        if (!map.has(plain)) {
-          map.set(plain, []);
+    const plainRows = await Promise.all(
+      this.entries.map(async entry => {
+        try {
+          const plain = await this.es.getPassword(entry.id);
+          return { id: entry.id, plain };
+        } catch (err) {
+          console.error('[renderer] duplicate scan failed', err);
+          return { id: entry.id, plain: null as string | null };
         }
-        map.get(plain)!.push(entry.id);
-      } catch (err) {
-        console.error('[renderer] duplicate scan failed', err);
+      })
+    );
+
+    for (const row of plainRows) {
+      if (!row.plain) continue;
+      if (!map.has(row.plain)) {
+        map.set(row.plain, []);
       }
+      map.get(row.plain)!.push(row.id);
     }
 
     const dupes = new Set<string>();
@@ -408,7 +420,8 @@ export class PasswordsComponent implements OnInit {
   async onCopy(entry: PasswordMeta): Promise<void> {
     if (this.showDemo) return;
     try {
-      await this.es.copyPassword(entry.id);
+      const copied = await this.es.copyPassword(entry.id);
+      if (!copied) return;
       this.copyingId = entry.id;
       this.copySecondsLeft = 20;
       clearInterval(this.copyTimer);
