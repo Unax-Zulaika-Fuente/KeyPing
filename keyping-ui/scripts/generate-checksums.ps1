@@ -7,6 +7,12 @@ $checksumsFileName = 'SHA256SUMS.txt'
 $signatureFileName = 'SHA256SUMS.txt.asc'
 $checksumsPath = Join-Path $buildDir $checksumsFileName
 $gpgKeyFingerprint = 'D70937B0AD7411A9E6A66337A5F10A1A37AAEBE9'
+$gpgCandidatePaths = @(
+  'C:\Program Files\GnuPG\bin\gpg.exe',
+  'C:\Program Files (x86)\GnuPG\bin\gpg.exe',
+  'C:\Program Files\Git\usr\bin\gpg.exe',
+  'C:\Program Files\Git\mingw64\bin\gpg.exe'
+)
 
 # Release artifacts to hash.
 $allowedExtensions = @('.exe', '.AppImage', '.dmg')
@@ -47,8 +53,13 @@ if (-not (Test-Path $checksumsPath)) {
   exit 0
 }
 
-# Ensure GPG is available before trying to sign.
-if (-not (Get-Command gpg -ErrorAction SilentlyContinue)) {
+# Resolve GPG from PATH or common Windows install paths.
+$gpgCommand = Get-Command gpg -ErrorAction SilentlyContinue
+$gpgExecutable = if ($gpgCommand) { $gpgCommand.Source } else { $null }
+if (-not $gpgExecutable) {
+  $gpgExecutable = $gpgCandidatePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+}
+if (-not $gpgExecutable) {
   throw "GPG is not installed or not available in PATH. Install GnuPG to generate $signatureFileName."
 }
 
@@ -59,7 +70,7 @@ try {
     Remove-Item $signatureFileName -Force
   }
 
-  & gpg --batch --yes --local-user $gpgKeyFingerprint --armor --detach-sign $checksumsFileName
+  & $gpgExecutable --batch --yes --local-user $gpgKeyFingerprint --armor --detach-sign $checksumsFileName
 
   if (-not (Test-Path $signatureFileName)) {
     throw "Failed to generate $signatureFileName."
