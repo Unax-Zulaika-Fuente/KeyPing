@@ -7,7 +7,7 @@
 [![Release](https://img.shields.io/github/v/release/Unax-Zulaika-Fuente/KeyPing?label=release)](https://github.com/Unax-Zulaika-Fuente/KeyPing/releases)
 [![Plataforma](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0f172a)](https://github.com/Unax-Zulaika-Fuente/KeyPing/releases)
 [![Stack](https://img.shields.io/badge/stack-Angular%20%2B%20Electron-2563eb)](./keyping-ui)
-[![Licencia](https://img.shields.io/badge/license-Apache--2.0-green)](./LICENSE)
+[![Licencia](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 
 ## Estado del proyecto
 
@@ -141,7 +141,12 @@ Para reportar bugs, incluye:
 
 ## Licencia
 
-Apache-2.0. Consulta [LICENSE](./LICENSE).
+MIT. Consulta [LICENSE](./LICENSE).
+
+## Terceros Y Marcas
+
+- Avisos de terceros: [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)
+- Aviso de marca y branding: [TRADEMARK.md](./TRADEMARK.md)
 
 ## Autor
 

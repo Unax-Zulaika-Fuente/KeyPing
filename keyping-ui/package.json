@@ -4,6 +4,7 @@
   "private": true,
   "description": "KeyPing - desktop app that detects reused or similar passwords locally (Angular + Electron, offline).",
   "author": "Unax Zulaika Fuente (Zulaa9)",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Unax-Zulaika-Fuente/KeyPing.git"

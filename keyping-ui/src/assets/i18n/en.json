@@ -468,7 +468,7 @@
   "dashboard.about.title": "About",
   "dashboard.about.subtitle": "Version and useful links",
   "dashboard.about.version": "Version",
-  "dashboard.about.license": "MIT License",
+  "dashboard.about.license": "MIT",
   "dashboard.about.repo": "Repository",
   "dashboard.about.licenseLink": "License",
   "dashboard.about.site": "Website"
