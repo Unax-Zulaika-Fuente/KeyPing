@@ -101,6 +101,16 @@ export class PasswordsComponent implements OnInit, OnDestroy {
   showDemo = false;
   demoEntries: PasswordMeta[] = this.buildDemoEntries();
   private brokenIconAssets = new Set<string>();
+  private autoWhiteIconAssets = new Set<string>();
+  private analyzedIconAssets = new Set<string>();
+  private readonly forceWhiteIconNames = new Set<string>([
+    'github',
+    'notion',
+    'linear',
+    'apple',
+    'vercel',
+    'medium'
+  ]);
 
 
   constructor(
@@ -1372,7 +1382,7 @@ export class PasswordsComponent implements OnInit, OnDestroy {
 
   iconImageSrc(entry: PasswordMeta): string | null {
     const iconName = entry.iconName || resolveEntryIcon(entry).iconName;
-    const normalized = iconName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const normalized = this.normalizeIconName(iconName);
     const candidates = [
       SERVICE_ICON_ASSETS[iconName],
       `assets/icons/services/${iconName}.svg`,
@@ -1387,6 +1397,69 @@ export class PasswordsComponent implements OnInit, OnDestroy {
       }
     }
     return null;
+  }
+
+  shouldForceWhiteIcon(entry: PasswordMeta, src?: string | null): boolean {
+    if (src && this.autoWhiteIconAssets.has(src)) return true;
+    const iconName = this.normalizeIconName(entry.iconName || resolveEntryIcon(entry).iconName);
+    return this.forceWhiteIconNames.has(iconName);
+  }
+
+  onIconImageLoad(event: Event, src: string | null, entry: PasswordMeta): void {
+    if (!src || this.analyzedIconAssets.has(src)) return;
+    this.analyzedIconAssets.add(src);
+
+    const iconName = this.normalizeIconName(entry.iconName || resolveEntryIcon(entry).iconName);
+    if (this.forceWhiteIconNames.has(iconName)) {
+      this.autoWhiteIconAssets.add(src);
+      return;
+    }
+
+    const img = event.target as HTMLImageElement | null;
+    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+
+    try {
+      const canvas = document.createElement('canvas');
+      const size = 24;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return;
+
+      ctx.clearRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+      const data = ctx.getImageData(0, 0, size, size).data;
+
+      let pixels = 0;
+      let lumSum = 0;
+      let chromaSum = 0;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const a = data[i + 3];
+        if (a < 20) continue;
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        lumSum += luminance;
+        chromaSum += (max - min);
+        pixels++;
+      }
+
+      if (!pixels) return;
+
+      const avgLum = lumSum / pixels;
+      const avgChroma = chromaSum / pixels;
+      const isDarkMonochrome = avgLum < 105 && avgChroma < 28;
+
+      if (isDarkMonochrome) {
+        this.autoWhiteIconAssets.add(src);
+      }
+    } catch {
+      // Ignora errores de análisis y mantiene renderizado normal.
+    }
   }
 
   onIconImageError(src: string | null): void {
@@ -1405,6 +1478,10 @@ export class PasswordsComponent implements OnInit, OnDestroy {
       return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     }
     return parts[0].slice(0, 2).toUpperCase();
+  }
+
+  private normalizeIconName(iconName: string): string {
+    return (iconName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
   private buildDemoEntries(): PasswordMeta[] {
