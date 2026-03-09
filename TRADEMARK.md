@@ -7,6 +7,8 @@ These brand assets remain reserved by the project owner.
 
 You may use, modify, and redistribute the source code under MIT terms.
 You may not market, brand, or represent a modified version as official KeyPing without explicit permission.
+This trademark policy does not limit your rights under the MIT License
+to use, modify, or distribute the source code.
 
 For branding permissions, contact:
 https://github.com/Unax-Zulaika-Fuente
