@@ -91,7 +91,26 @@ Download binaries from GitHub Releases:
 
 ## Release Integrity
 
-Each release includes SHA256 checksums to verify binary integrity.
+Each release includes:
+
+- `SHA256SUMS.txt`
+- `SHA256SUMS.txt.asc` (detached ASCII-armored GPG signature)
+
+Release signing key fingerprint:
+
+`D70937B0AD7411A9E6A66337A5F10A1A37AAEBE9`
+
+Verify signature:
+
+```bash
+gpg --verify SHA256SUMS.txt.asc SHA256SUMS.txt
+```
+
+Verify checksums:
+
+```bash
+sha256sum -c SHA256SUMS.txt
+```
 
 ## Architecture
 
