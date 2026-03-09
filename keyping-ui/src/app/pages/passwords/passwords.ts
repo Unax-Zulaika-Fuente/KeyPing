@@ -1381,7 +1381,7 @@ export class PasswordsComponent implements OnInit, OnDestroy {
   }
 
   iconImageSrc(entry: PasswordMeta): string | null {
-    const iconName = entry.iconName || resolveEntryIcon(entry).iconName;
+    const iconName = this.getEffectiveIconName(entry);
     const normalized = this.normalizeIconName(iconName);
     const candidates = [
       SERVICE_ICON_ASSETS[iconName],
@@ -1401,7 +1401,7 @@ export class PasswordsComponent implements OnInit, OnDestroy {
 
   shouldForceWhiteIcon(entry: PasswordMeta, src?: string | null): boolean {
     if (src && this.autoWhiteIconAssets.has(src)) return true;
-    const iconName = this.normalizeIconName(entry.iconName || resolveEntryIcon(entry).iconName);
+    const iconName = this.normalizeIconName(this.getEffectiveIconName(entry));
     return this.forceWhiteIconNames.has(iconName);
   }
 
@@ -1482,6 +1482,33 @@ export class PasswordsComponent implements OnInit, OnDestroy {
 
   private normalizeIconName(iconName: string): string {
     return (iconName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private getEffectiveIconName(entry: PasswordMeta): string {
+    const storedIconName = entry.iconName || '';
+    const normalizedStored = this.normalizeIconName(storedIconName);
+
+    if (entry.iconSource === 'manual' && normalizedStored) {
+      return storedIconName;
+    }
+
+    const resolved = resolveEntryIcon(entry);
+    const resolvedIconName = resolved.iconName || '';
+    const normalizedResolved = this.normalizeIconName(resolvedIconName);
+
+    if (!normalizedStored) {
+      return resolvedIconName;
+    }
+
+    if (normalizedStored === 'generic' && normalizedResolved && normalizedResolved !== 'generic') {
+      return resolvedIconName;
+    }
+
+    if (entry.iconSource === 'auto' && normalizedResolved && normalizedResolved !== 'generic' && normalizedStored !== normalizedResolved) {
+      return resolvedIconName;
+    }
+
+    return storedIconName;
   }
 
   private buildDemoEntries(): PasswordMeta[] {
