@@ -2,7 +2,7 @@
 
 [English](./README.md) | [Espanol](./README.es.md)
 
-**KeyPing is a privacy-first desktop password manager that keeps everything local and helps you avoid weak, reused, or overly similar passwords.**
+**KeyPing is a privacy-first desktop password manager focused on detecting weak, reused, and risky passwords while keeping all data fully local and offline.**
 
 [![Release](https://img.shields.io/github/v/release/Unax-Zulaika-Fuente/KeyPing?label=release)](https://github.com/Unax-Zulaika-Fuente/KeyPing/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0f172a)](https://github.com/Unax-Zulaika-Fuente/KeyPing/releases)
@@ -14,18 +14,6 @@
 Active development. Core features are stable and used daily, with continuous improvements in UX, security, and test coverage.
 
 ## Screenshots
-
-Add these files under `docs/screenshots/`:
-
-- `dashboard.png`
-- `password-list.png`
-- `password-health.png`
-- `password-health2.png`
-- `generator.png`
-- `settings.png`
-- `settings2.png`
-
-Rendered preview:
 
 ![Dashboard](docs/screenshots/dashboard.png)
 ![Password List](docs/screenshots/password-list.png)
@@ -48,6 +36,19 @@ Rendered preview:
 - Auto-updates via GitHub Releases
 - Interactive onboarding and demo mode
 - ES / EN interface
+
+## Why KeyPing
+
+Most password managers focus on storage and autofill.
+
+KeyPing focuses on password hygiene:
+
+- detecting weak passwords
+- identifying reused credentials
+- highlighting risky patterns
+- improving vault security over time
+
+All while keeping data fully local and offline.
 
 ## Security
 
@@ -83,6 +84,10 @@ Download binaries from GitHub Releases:
 - Windows: `.exe` installer (NSIS)
 - Linux: `AppImage`
 - macOS: `.dmg`
+
+## Release Integrity
+
+Each release includes SHA256 checksums to verify binary integrity.
 
 ## Architecture
 

@@ -2,7 +2,7 @@
 
 [English](./README.md) | [Espanol](./README.es.md)
 
-**KeyPing es un gestor de contrasenas de escritorio centrado en privacidad, que mantiene todo en local y te ayuda a evitar contrasenas debiles, reutilizadas o demasiado parecidas.**
+**KeyPing es un gestor de contrasenas de escritorio centrado en privacidad, enfocado en detectar contrasenas debiles, reutilizadas y riesgosas, manteniendo todos los datos en local y offline.**
 
 [![Release](https://img.shields.io/github/v/release/Unax-Zulaika-Fuente/KeyPing?label=release)](https://github.com/Unax-Zulaika-Fuente/KeyPing/releases)
 [![Plataforma](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0f172a)](https://github.com/Unax-Zulaika-Fuente/KeyPing/releases)
@@ -14,18 +14,6 @@
 Desarrollo activo. Las funcionalidades base son estables y se estan mejorando de forma continua en UX, seguridad y cobertura de tests.
 
 ## Capturas
-
-Anade estos archivos en `docs/screenshots/`:
-
-- `dashboard.png`
-- `password-list.png`
-- `password-health.png`
-- `password-health2.png`
-- `generator.png`
-- `settings.png`
-- `settings2.png`
-
-Vista previa renderizada:
 
 ![Dashboard](docs/screenshots/dashboard.png)
 ![Lista de contrasenas](docs/screenshots/password-list.png)
@@ -48,6 +36,19 @@ Vista previa renderizada:
 - Auto-actualizaciones via GitHub Releases
 - Onboarding interactivo y modo demo
 - Interfaz ES / EN
+
+## Por que KeyPing
+
+La mayoria de gestores de contrasenas se centran en almacenamiento y autocompletado.
+
+KeyPing se centra en higiene de contrasenas:
+
+- detectar contrasenas debiles
+- identificar credenciales reutilizadas
+- destacar patrones de riesgo
+- mejorar la seguridad del vault con el tiempo
+
+Todo manteniendo los datos en local y offline.
 
 ## Seguridad
 
@@ -83,6 +84,10 @@ Descarga binarios desde GitHub Releases:
 - Windows: instalador `.exe` (NSIS)
 - Linux: `AppImage`
 - macOS: `.dmg`
+
+## Integridad de releases
+
+Cada release incluye checksums SHA256 para verificar la integridad de los binarios.
 
 ## Arquitectura
 
