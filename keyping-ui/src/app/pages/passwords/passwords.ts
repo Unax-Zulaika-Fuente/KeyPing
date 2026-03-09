@@ -477,18 +477,57 @@ export class PasswordsComponent implements OnInit {
   private async onDelete(entry: PasswordMeta): Promise<void> {
     if (this.showDemo) return;
 
+    const previousOrderedIds = this.orderedEntries.map(e => e.id);
+    const wasSelected = this.selected?.id === entry.id;
     await this.es.deletePassword(entry.id);
-    await this.loadEntries();
-    this.master.persistVault(this.entries);
-    
-    // EN CASO DE QUE NO SE ACTUALIZE CORRECTAMENTE EL CONTADOR AL ELIMINAR:
-    //this.passwordCountSvc.setLocalCount(this.entries.length);
 
-    if (this.selected?.id === entry.id) {
-      this.selected = null;
+    this.entries = this.entries.filter(e => e.id !== entry.id);
+    this.passwordCountSvc.setLocalCount(this.entries.length);
+    this.showDemo = this.entries.length === 0 && this.isDemoAllowed();
+    this.syncOrderingState();
+    delete this.revealed[entry.id];
+    this.master.persistVault(this.entries);
+
+    if (this.showDemo) {
+      this.selected = this.demoEntries[0] || null;
+      this.history = [];
+      this.historyModalOpen = false;
+      return;
     }
 
-    delete this.revealed[entry.id];
+    if (wasSelected) {
+      this.selected = this.pickSelectionAfterDelete(previousOrderedIds, entry.id);
+    } else if (this.selected) {
+      // Rebind selected to current entries array to keep references consistent.
+      this.selected = this.entries.find(e => e.id === this.selected!.id) || null;
+    }
+
+    if (this.selected) {
+      await this.loadHistory(this.selected.id);
+    } else {
+      this.history = [];
+      this.historyModalOpen = false;
+    }
+
+    await this.refreshDuplicateIndex();
+  }
+
+  private pickSelectionAfterDelete(previousOrderedIds: string[], deletedId: string): PasswordMeta | null {
+    const deletedIndex = previousOrderedIds.indexOf(deletedId);
+    if (deletedIndex === -1) return this.entries[0] || null;
+
+    const nextId = previousOrderedIds[deletedIndex + 1];
+    const prevId = previousOrderedIds[deletedIndex - 1];
+
+    if (nextId) {
+      const next = this.entries.find(e => e.id === nextId);
+      if (next) return next;
+    }
+    if (prevId) {
+      const prev = this.entries.find(e => e.id === prevId);
+      if (prev) return prev;
+    }
+    return this.entries[0] || null;
   }
 
   // ---- EDITAR ----
