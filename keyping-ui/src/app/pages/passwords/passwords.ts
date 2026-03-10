@@ -111,6 +111,12 @@ export class PasswordsComponent implements OnInit, OnDestroy {
     'vercel',
     'medium'
   ]);
+  private readonly neverForceWhiteIconNames = new Set<string>([
+    'epicgames',
+    'tumblr',
+    'twitterx',
+    'uber'
+  ]);
 
 
   constructor(
@@ -1400,8 +1406,12 @@ export class PasswordsComponent implements OnInit, OnDestroy {
   }
 
   shouldForceWhiteIcon(entry: PasswordMeta, src?: string | null): boolean {
-    if (src && this.autoWhiteIconAssets.has(src)) return true;
     const iconName = this.normalizeIconName(this.getEffectiveIconName(entry));
+    if (this.neverForceWhiteIconNames.has(iconName)) {
+      if (src) this.autoWhiteIconAssets.delete(src);
+      return false;
+    }
+    if (src && this.autoWhiteIconAssets.has(src)) return true;
     return this.forceWhiteIconNames.has(iconName);
   }
 
@@ -1410,6 +1420,10 @@ export class PasswordsComponent implements OnInit, OnDestroy {
     this.analyzedIconAssets.add(src);
 
     const iconName = this.normalizeIconName(entry.iconName || resolveEntryIcon(entry).iconName);
+    if (this.neverForceWhiteIconNames.has(iconName)) {
+      this.autoWhiteIconAssets.delete(src);
+      return;
+    }
     if (this.forceWhiteIconNames.has(iconName)) {
       this.autoWhiteIconAssets.add(src);
       return;
