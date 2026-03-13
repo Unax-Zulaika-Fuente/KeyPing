@@ -178,7 +178,8 @@ MIT. See [LICENSE](./LICENSE).
 
 ## Author
 
-Zulaa9 - Unax Zulaika Fuente
+**Unax Zulaika Fuente (Zulaa9)**  
+Software Systems Engineer  
 
 - GitHub: https://github.com/Unax-Zulaika-Fuente
 - Project: https://github.com/Unax-Zulaika-Fuente/KeyPing
